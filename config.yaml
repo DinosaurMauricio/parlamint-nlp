@@ -1,0 +1,29 @@
+# TODO: extend so it takes several languages and I can just provide the country
+paths:
+  texts: "parla-parla\\dataset\\ParlaMint-IT-en.txt"
+  conllu: "parla-parla\\dataset\\ParlaMint-IT-en.conllu"
+
+# Possible topics:
+# Macroeconomics, Health, Mix, Law and Crime, Culture, Other
+# Agriculture, Technology, Energy, Government Operations, Environment
+# Transportation, International Affairs, Domestic Commerce, Foreign Trade
+# Public Lands, Social Welfare, Civil Rights, Labor
+# Immigration, Housing, Defense, Education, -
+topics:
+  - Health
+
+# Possible party orientations:
+# Centre-right, Left, Centre, Centre to centre-left
+# Centre-left, Right to far-right, Big tent, -
+orientations:
+  - Centre-right
+  - Left
+  - Centre
+  - Centre to centre-left
+  - Centre-left
+  - Right to far-right
+  - Big tent
+
+# leave empty if want to process all years
+# dataset goes from 2013-2022
+years:
