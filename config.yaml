@@ -27,3 +27,4 @@ orientations:
 # leave empty if want to process all years
 # dataset goes from 2013-2022
 years:
+  - "2022"

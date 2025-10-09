@@ -3,17 +3,44 @@ import pandas as pd
 
 from conllu import parse_incr
 
-from constants import TXT_EXT
+from constants import TXT_EXT, ANA_META_EXT, META_EXT, CONLLU_EXT
+from utils.filters import filter_meta, filter_years
 
 
-class ParlaMintLoader:
+class ParlaMintFileLoader:
+    @staticmethod
+    def get_yearly_files(config):
+        """
+        Collects all file names grouped by year.
+        Args:
+            OmegaConf:
+                config yaml config file with paths and filters
+
+        Returns:
+            list[dict]:
+                A list of dictionaries, each containing:
+                    {
+                        "files": list of file base names (without extension),
+                        "year": year folder name,
+                        "number_of_files": total files for that year
+                    }
+        """
+        years_folders = ParlaMintFileLoader.list_year_folders(config.paths.conllu)
+        years_folders = filter_years(years_folders, config.years)
+
+        loaded_files_dict, _ = ParlaMintFileLoader.load_file_names_by_years(
+            config.paths.conllu, years_folders, CONLLU_EXT
+        )
+        return loaded_files_dict
+
     @staticmethod
     def load_file_names_by_years(path, years, extension):
         file_names_by_year = []
         total_files = 0
+
         for year in years:
             path_with_year = os.path.join(path, year)
-            files, number_of_files = ParlaMintLoader.load_file_names(
+            files, number_of_files = ParlaMintFileLoader.load_file_names(
                 path_with_year, extension
             )
 
@@ -60,12 +87,33 @@ class ParlaMintLoader:
         return pd.DataFrame(data)
 
     @staticmethod
-    def load_years_folders(path):
+    def list_year_folders(path):
         years_folders = os.listdir(path)
         # could just delete the file... but its fine like this
         if "00README.txt" in years_folders:
             years_folders.remove("00README.txt")
         return years_folders
+
+    @staticmethod
+    def load_parlamint_records(path, config):
+
+        df_meta = ParlaMintFileLoader.load_tsv_file(
+            path + META_EXT,
+            ["Text_ID", "ID", "Party_orientation", "Topic"],
+        )
+        df_meta = filter_meta(df_meta, config.topics, config.orientations)
+
+        if df_meta.empty:
+            return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+        df_ana_meta = ParlaMintFileLoader.load_tsv_file(
+            path + ANA_META_EXT, ["ID", "Parent_ID"]
+        )
+        df_segment_data = ParlaMintFileLoader.load_segments_sentiment_data(
+            path + CONLLU_EXT
+        )
+
+        return df_meta, df_ana_meta, df_segment_data
 
     # NOTE: segments include non-verbal cues (e.g. [[Applause.]]) # raw text doesn't.
     # Won't delete this till I get a better idea whats best lol
