@@ -9,12 +9,18 @@ from utils.filters import filter_meta, filter_years
 
 class ParlaMintFileLoader:
     @staticmethod
-    def get_yearly_files(config):
+    def get_yearly_files(path, extension, years_to_filter=None):
         """
         Collects all file names grouped by year.
         Args:
-            OmegaConf:
-                config yaml config file with paths and filters
+            str:
+                path to files
+            str:
+                extension of file
+            years_to_filter:
+                the years we want to filter, default set to None
+            extension:
+                the extension of the files we want to load (.txt, .conllu, etc)
 
         Returns:
             list[dict]:
@@ -25,11 +31,11 @@ class ParlaMintFileLoader:
                         "number_of_files": total files for that year
                     }
         """
-        years_folders = ParlaMintFileLoader.list_year_folders(config.paths.conllu)
-        years_folders = filter_years(years_folders, config.years)
+        years_folders = ParlaMintFileLoader.list_year_folders(path)
+        years_folders = filter_years(years_folders, years_to_filter)
 
         loaded_files_dict, _ = ParlaMintFileLoader.load_file_names_by_years(
-            config.paths.conllu, years_folders, CONLLU_EXT
+            path, years_folders, extension
         )
         return loaded_files_dict
 
@@ -118,16 +124,9 @@ class ParlaMintFileLoader:
     # NOTE: segments include non-verbal cues (e.g. [[Applause.]]) # raw text doesn't.
     # Won't delete this till I get a better idea whats best lol
     @staticmethod
-    def load_texts(
-        texts_path,
-        row,
-    ):
-        text_file = os.path.join(texts_path, row.Text_ID + TXT_EXT)
-
+    def load_texts(path):
         df_uttrances = pd.read_csv(
-            text_file, sep="\t", names=["ID", "Text"], header=None
+            path + TXT_EXT, sep="\t", names=["ID", "Text"], header=None
         )
 
-        df_uttrances = df_uttrances[df_uttrances["ID"] == row.ID]
-
-        return [row_utt.Text for _, row_utt in df_uttrances.iterrows()]
+        return df_uttrances

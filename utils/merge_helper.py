@@ -13,18 +13,23 @@ def process_df_samples(df):
 
         text = " ".join([seg["text"] for seg in text_segments])
 
-        head = group.head(0)
+        head = group.iloc[0]
 
-        samples.append(
-            {
-                "id": parent_id,
-                "party_orientation": head.Party_orientation,
-                "topic": head.Topic,
-                "text": text,
-                "text_segments": text_segments,
-                "year": head.year,
-            }
-        )
+        temp_sample = {
+            "id": parent_id,
+            "party_orientation": head.Party_orientation,
+            "topic": head.Topic,
+            "text": text,
+            "text_segments": text_segments,
+            "year": head.year,
+        }
+
+        # we take only this value for analyzing, the text included in the conllu
+        # might include other information (i.e. such as actions)
+        if head.Text:
+            temp_sample["raw_text"] = head.Text
+
+        samples.append(temp_sample)
 
     return samples
 

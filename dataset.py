@@ -6,6 +6,8 @@ from tqdm import tqdm
 from utils.file_loader import ParlaMintFileLoader
 from utils.merge_helper import merge_data_frames, process_df_samples
 
+from constants import CONLLU_EXT
+
 
 class ParlimentDataset(torch.utils.data.Dataset):
     def __init__(self, config):
@@ -21,7 +23,9 @@ class ParlimentDataset(torch.utils.data.Dataset):
     def _load_samples(self):
         samples = []
 
-        loaded_files_dict = ParlaMintFileLoader.get_yearly_files(self.config)
+        loaded_files_dict = ParlaMintFileLoader.get_yearly_files(
+            self.config.path.conllu, CONLLU_EXT, years_to_filter=self.config.years
+        )
 
         for files_dict in loaded_files_dict:
             files, year, number_of_files = files_dict.values()
