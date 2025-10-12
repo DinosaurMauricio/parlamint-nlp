@@ -24,7 +24,7 @@ class ParlimentDataset(torch.utils.data.Dataset):
         samples = []
 
         loaded_files_dict = ParlaMintFileLoader.get_yearly_files(
-            self.config.path.conllu, CONLLU_EXT, years_to_filter=self.config.years
+            self.config.paths.conllu, CONLLU_EXT, years_to_filter=self.config.years
         )
 
         for files_dict in loaded_files_dict:

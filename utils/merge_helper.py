@@ -25,8 +25,9 @@ def process_df_samples(df):
         }
 
         # we take only this value for analyzing, the text included in the conllu
-        # might include other information (i.e. such as actions)
-        if head.Text:
+        # might include other information (i.e. such as actions).
+        # Only used when .txt file is loaded
+        if "Text" in df.columns:
             temp_sample["raw_text"] = head.Text
 
         samples.append(temp_sample)

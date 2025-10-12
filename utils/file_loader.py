@@ -113,7 +113,7 @@ class ParlaMintFileLoader:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
         df_ana_meta = ParlaMintFileLoader.load_tsv_file(
-            path + ANA_META_EXT, ["ID", "Parent_ID"]
+            path + ANA_META_EXT, ["ID", "Parent_ID", "Words", "Tokens"]
         )
         df_segment_data = ParlaMintFileLoader.load_segments_sentiment_data(
             path + CONLLU_EXT

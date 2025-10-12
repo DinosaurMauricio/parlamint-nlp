@@ -3,6 +3,8 @@ paths:
   texts: "parla-parla\\dataset\\ParlaMint-IT-en.txt"
   conllu: "parla-parla\\dataset\\ParlaMint-IT-en.conllu"
 
+# Topics to add to the dataset
+
 # Possible topics:
 # Macroeconomics, Health, Mix, Law and Crime, Culture, Other
 # Agriculture, Technology, Energy, Government Operations, Environment
@@ -11,6 +13,8 @@ paths:
 # Immigration, Housing, Defense, Education, -
 topics:
   - Health
+
+# Orientations to add to the dataset
 
 # Possible party orientations:
 # Centre-right, Left, Centre, Centre to centre-left
@@ -24,7 +28,9 @@ orientations:
   - Right to far-right
   - Big tent
 
+# Years to include: only these years will be processed
+
 # leave empty if want to process all years
 # dataset goes from 2013-2022
 years:
-  - "2022"
+  #- "2022"
