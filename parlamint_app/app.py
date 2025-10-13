@@ -1,7 +1,9 @@
 import streamlit as st
 import plotly.express as px
 
-from filters import sidebar, selected_filters_from_sidebar
+
+from views.general import create_view
+from filters import sidebar, selected_filters_from_sidebar, get_view_selector
 from utils.data import load_data, get_unique_df
 from config import DATA_PATH
 
@@ -28,43 +30,81 @@ if "unique_df" not in st.session_state:
 else:
     unique_df = st.session_state.unique_df
 
+if "view_selector" not in st.session_state:
+    # TODO: When using multiple countries this has to change
+    # as we could select a specific country now just for party orientation is fine
+    st.session_state.view_selector = get_view_selector(df)
 
 sidebar(df)
 
 filters = selected_filters_from_sidebar(df)
 
-# Define columns to group by
-to_filter = ["year", "Topic"]
-party_filter_active = bool(filters.get("Party_orientation"))
-if party_filter_active:
-    to_filter.append("Party_orientation")
+if st.session_state.view_selector == "General":
+    create_view(filters, unique_df)
+else:
+    topic_tab, gender_tab, orientation_tab = st.tabs(
+        [
+            "Topics",
+            "Gender",
+            "Party",
+        ]
+    )
 
-# Group and sum words
-tokens_by_year = unique_df.groupby(to_filter)["Words"].sum().reset_index()
+    # Filter dataframe by selected topics (if any)
+    topic_df = unique_df[unique_df["Topic"].isin(filters.get("Topic", []))]
 
-# Apply filters
-tokens_by_year = tokens_by_year[tokens_by_year["year"].isin(filters["year"])]
-tokens_by_year = tokens_by_year[tokens_by_year["Topic"].isin(filters["Topic"])]
-if party_filter_active:
-    tokens_by_year = tokens_by_year[
-        tokens_by_year["Party_orientation"].isin(filters["Party_orientation"])
-    ]
+    # Group by Party_orientation and Topic, and count occurrences
+    topic_counts = (
+        topic_df.groupby(["Party_orientation", "Topic"])
+        .size()
+        .reset_index(name="Count")
+    )
 
-bar_args = {
-    "x": "year",
-    "y": "Words",
-    "title": "Total Tokens by Year"
-    + (" and Party Orientation" if party_filter_active else ""),
-    "labels": {"Words": "Word Count", "year": "Year"},
-    "hover_data": ["Topic"],
-}
+    # Get unique party orientations
+    orientations = topic_counts["Party_orientation"].unique()
 
-if party_filter_active:
-    bar_args["color"] = "Party_orientation"
-    bar_args["barmode"] = "group"
+    # Create one pie chart per orientation
+    for orientation in orientations:
+        party_data = topic_counts[topic_counts["Party_orientation"] == orientation]
 
-fig = px.bar(tokens_by_year, **bar_args)
+        fig = px.pie(
+            party_data,
+            names="Topic",
+            values="Count",
+            title=f"Topic Mentions by {orientation}",
+        )
 
+        st.plotly_chart(fig, use_container_width=True)
 
-# Streamlit display
-st.plotly_chart(fig, use_container_width=True)
+    words_by_year_gender = (
+        unique_df.groupby(["year", "Speaker_gender"]).size().reset_index(name="Count")
+    )
+
+    fig3 = px.line(
+        words_by_year_gender,
+        x="year",
+        y="Count",
+        color="Speaker_gender",
+        markers=True,
+        title="Gender Over Time",
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+
+    # Group by Topic and Party_orientation, count occurrences
+    topic_party_counts = (
+        unique_df.groupby(["Topic", "Party_orientation"])
+        .size()
+        .reset_index(name="Count")
+    )
+
+    fig_bar = px.bar(
+        topic_party_counts,
+        x="Topic",
+        y="Count",
+        color="Party_orientation",
+        barmode="group",  # shows bars side-by-side
+        title="Topic Mentions by Party Orientation",
+        labels={"Count": "Number of Mentions", "Topic": "Topic"},
+    )
+
+    st.plotly_chart(fig_bar, use_container_width=True)
