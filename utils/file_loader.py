@@ -105,8 +105,17 @@ class ParlaMintFileLoader:
 
         df_meta = ParlaMintFileLoader.load_tsv_file(
             path + META_EXT,
-            ["Text_ID", "ID", "Party_orientation", "Topic"],
+            [
+                "Text_ID",
+                "ID",
+                "Party_orientation",
+                "Speaker_ID",
+                "Speaker_name",
+                "Speaker_gender",
+                "Topic",
+            ],
         )
+
         df_meta = filter_meta(df_meta, config.topics, config.orientations)
 
         if df_meta.empty:

@@ -12,7 +12,29 @@ paths:
 # Public Lands, Social Welfare, Civil Rights, Labor
 # Immigration, Housing, Defense, Education, -
 topics:
+  - Macroeconomics
   - Health
+  - Mix
+  - Law and Crime
+  - Culture
+  - Other
+  - Agriculture
+  - Technology
+  - Energy
+  - Government Operations
+  - Environment
+  - Transportation
+  - International Affairs
+  - Domestic Commerce
+  - Foreign Trade
+  - Public Lands
+  - Social Welfare
+  - Civil Rights
+  - Labor
+  - Immigration
+  - Housing
+  - Defense
+  - Education
 
 # Orientations to add to the dataset
 
@@ -27,10 +49,10 @@ orientations:
   - Centre-left
   - Right to far-right
   - Big tent
+  - "-" # Undefined orientation
 
 # Years to include: only these years will be processed
 
 # leave empty if want to process all years
 # dataset goes from 2013-2022
 years:
-  #- "2022"
