@@ -1,34 +1,33 @@
 import streamlit as st
 
-import plotly.express as px
+from config import FILTERS
+from data.loader import get_view_options
+from ui.charts import aggregate_words, build_bar_chart
 
 
-def create_view(filters, df):
-    # Define columns to group by
-    to_group_by = ["year", "Topic"]
-    party_filter_active = bool(filters.get("Party_orientation"))
-    if party_filter_active:
-        to_group_by.append("Party_orientation")
+def sidebar(df):
+    with st.sidebar:
+        st.header("Overview")
+        st.session_state.view_selector = st.selectbox(
+            "Choose Party Orientation:", get_view_options(df)
+        )
 
-    tokens_by_year = df.groupby(to_group_by)["Words"].sum().reset_index()
+        st.header("Filters")
+        with st.container(border=True):
+            st.markdown("**Select Filters**")
 
-    for key in to_group_by:
-        tokens_by_year = tokens_by_year[tokens_by_year[key].isin(filters[key])]
+            for filter in FILTERS:
+                header, key = filter
+                with st.expander(header):
+                    select_all = st.checkbox(
+                        "Select All", value=True, key=f"select_all_{header.lower()}"
+                    )
+                    st.markdown(f"**Select {header}:**")
+                    for y in sorted(df[key].unique()):
+                        st.checkbox(str(y), value=select_all, key=f"{key.lower()}_{y}")
 
-    bar_args = {
-        "x": "year",
-        "y": "Words",
-        "title": "Total Tokens by Year"
-        + (" and Party Orientation" if party_filter_active else ""),
-        "labels": {"Words": "Word Count", "year": "Year"},
-        "hover_data": ["Topic"],
-    }
 
-    if party_filter_active:
-        bar_args["color"] = "Party_orientation"
-        bar_args["barmode"] = "group"
-
-    fig = px.bar(tokens_by_year, **bar_args)
-
-    # Streamlit display
+def create_view(df, filters):
+    grouped = aggregate_words(df, filters)
+    fig = build_bar_chart(grouped, filters)
     st.plotly_chart(fig, use_container_width=True)

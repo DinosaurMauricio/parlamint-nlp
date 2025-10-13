@@ -3,8 +3,9 @@ import plotly.express as px
 
 
 from views.general import create_view
-from filters import sidebar, selected_filters_from_sidebar, get_view_selector
-from utils.data import load_data, get_unique_df
+from utils.filters import get_active_filters
+from data.loader import load_data, load_unique_df, get_view_options
+from views.general import sidebar, create_view
 from config import DATA_PATH
 
 # Config
@@ -25,7 +26,7 @@ else:
 
 if "unique_df" not in st.session_state:
     with st.spinner("Filtering some data..."):
-        unique_df = get_unique_df(df)
+        unique_df = load_unique_df(df)
         st.session_state.unique_df = unique_df
 else:
     unique_df = st.session_state.unique_df
@@ -33,14 +34,14 @@ else:
 if "view_selector" not in st.session_state:
     # TODO: When using multiple countries this has to change
     # as we could select a specific country now just for party orientation is fine
-    st.session_state.view_selector = get_view_selector(df)
+    st.session_state.view_selector = get_view_options(df)
 
 sidebar(df)
 
-filters = selected_filters_from_sidebar(df)
+filters = get_active_filters(df)
 
 if st.session_state.view_selector == "General":
-    create_view(filters, unique_df)
+    create_view(unique_df, filters)
 else:
     topic_tab, gender_tab, orientation_tab = st.tabs(
         [

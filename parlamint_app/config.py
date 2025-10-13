@@ -1,4 +1,4 @@
-DATA_PATH = "parlamint_preprocessed.parquet"
+DATA_PATH = "assets/parlamint_preprocessed.parquet"
 FILTERS = [
     ("Years", "year"),
     ("Topics", "Topic"),
