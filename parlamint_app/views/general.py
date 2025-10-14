@@ -3,16 +3,17 @@ import streamlit as st
 from config import FILTERS
 from data.loader import get_view_options
 from ui.charts import (
-    aggregate_words,
     build_word_count_bar_chart,
-    aggregate_gender_by_year,
     build_gender_by_year_line_chart,
-    aggregate_count_by_topic_and_orientation,
     build_count_by_topic_and_orientation_bar_chart,
+)
+from ui.aggregations import (
+    aggregate_words,
+    aggregate_count_by_columns,
 )
 
 
-def sidebar(df):
+def create_sidebar(df):
     with st.sidebar:
         st.header("Overview")
         st.session_state.view_selector = st.selectbox(
@@ -36,19 +37,42 @@ def sidebar(df):
 
 def create_view(df, filters):
 
-    word_count_tab, gender_tab, topic_tab = st.tabs(["Word", "Gender", "Topic"])
+    tab = st.selectbox("Choose Insights view", ["Text Overview", "Gender", "Topic"])
 
-    with word_count_tab:
+    if tab == "Text Overview":
+        # TODO: Use for statistics
+        # word_count_tab, gender_tab, topic_tab = st.tabs(["Word", "Gender", "Topic"])
+        # with word_count_tab:
         grouped = aggregate_words(df, filters)
-        fig = build_word_count_bar_chart(grouped, filters)
-        st.plotly_chart(fig, use_container_width=True)
+        if grouped.empty:
+            # TODO: Improve the error messages for each selected case
+            st.warning("No data available for the selected filters.")
+        else:
+            fig = build_word_count_bar_chart(grouped, filters)
+            st.plotly_chart(fig, use_container_width=True)
 
-    with gender_tab:
-        grouped = aggregate_gender_by_year(df)
-        fig = build_gender_by_year_line_chart(grouped)
-        st.plotly_chart(fig, use_container_width=True)
+    elif tab == "Gender":
+        grouped = aggregate_count_by_columns(
+            df,
+            filters,
+            ["year", "Speaker_gender"],
+            ["year"],
+        )
+        if grouped.empty:
+            st.warning("No data available for the selected filters.")
+        else:
+            fig = build_gender_by_year_line_chart(grouped)
+            st.plotly_chart(fig, use_container_width=True)
 
-    with topic_tab:
-        grouped = aggregate_count_by_topic_and_orientation(df)
-        fig = build_count_by_topic_and_orientation_bar_chart(df)
-        st.plotly_chart(fig, use_container_width=True)
+    elif tab == "Topic":
+        grouped = aggregate_count_by_columns(
+            df,
+            filters,
+            ["Party_orientation", "Topic"],
+            ["Party_orientation", "Topic"],
+        )
+        if grouped.empty:
+            st.warning("No data available for the selected filters.")
+        else:
+            fig = build_count_by_topic_and_orientation_bar_chart(grouped)
+            st.plotly_chart(fig, use_container_width=True)

@@ -1,6 +1,7 @@
 import streamlit as st
 
-from ui.charts import aggregate_topics_by_party, build_pie_chart
+from ui.charts import build_pie_chart
+from ui.aggregations import aggregate_topics_by_party
 
 
 def create_orientation_view(df, filters, orientation):
