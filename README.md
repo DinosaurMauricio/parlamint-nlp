@@ -6,6 +6,9 @@ The goal is to understand the dataset and prepare for future tasks. Some ideas t
 
 ## Todo ✅
 
-- [ ] Understand dataset structure, metadata, and annotations
+- [x] Understand dataset structure and metadata
 - [ ] Build a simple interactive dashboard to explore the data
-- [ ] Identify potential analyses for future AI tasks: sentiment, stance, topic modeling
+
+  - Note: Still WIP but moved to [parlamint-visual-dashboard](https://github.com/DinosaurMauricio/parlamint-visual-dashboard)
+
+- [ ] Identify potential future AI task to study: sentiment, stance, topic modeling, other
