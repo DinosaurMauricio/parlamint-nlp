@@ -6,6 +6,7 @@ from ui.charts import (
     build_word_count_bar_chart,
     build_gender_by_year_line_chart,
     build_count_by_topic_and_orientation_bar_chart,
+    build_topics_per_year_chart,
 )
 from ui.aggregations import (
     aggregate_words,
@@ -36,7 +37,8 @@ def create_sidebar(df):
 
 
 def create_view(df, filters):
-
+    # TODO: This for sure could be abstracted in a more simple redable way
+    # for now, simple like this, is fine
     tab = st.selectbox("Choose Insights view", ["Text Overview", "Gender", "Topic"])
 
     if tab == "Text Overview":
@@ -75,4 +77,17 @@ def create_view(df, filters):
             st.warning("No data available for the selected filters.")
         else:
             fig = build_count_by_topic_and_orientation_bar_chart(grouped)
+            st.plotly_chart(fig, use_container_width=True)
+
+        grouped_by_year = aggregate_count_by_columns(
+            df,
+            filters,
+            ["Party_orientation", "Topic", "year"],
+            ["Party_orientation", "Topic", "year"],
+        )
+
+        if grouped.empty:
+            st.warning("No data available for the selected filters.")
+        else:
+            fig = build_topics_per_year_chart(grouped_by_year)
             st.plotly_chart(fig, use_container_width=True)

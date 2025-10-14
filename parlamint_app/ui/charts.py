@@ -50,3 +50,16 @@ def build_count_by_topic_and_orientation_bar_chart(df):
         title="Topic Mentions by Party Orientation",
         labels={"Count": "Number of Mentions", "Topic": "Topic"},
     )
+
+
+def build_topics_per_year_chart(df):
+    return px.bar(
+        df,
+        x="year",
+        y="Count",
+        color="Party_orientation",
+        barmode="group",
+        title="Topics Mentioned per Year by Party",
+        hover_data=["Topic"],
+        labels={"Count": "Mentions", "year": "Year"},
+    )
