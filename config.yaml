@@ -3,7 +3,12 @@ paths:
   texts: "parla-parla\\dataset\\ParlaMint-IT-en.txt"
   conllu: "parla-parla\\dataset\\ParlaMint-IT-en.conllu"
 
-# Topics to add to the dataset
+# FILTERS
+# Add filters to remove data from being processed. Leave filter emtpy to process everything
+# NOTE: - For topics and orientations to filter - set it as a string '-'
+#       - For years set as strings '2013'
+
+# Topics filter
 
 # Possible topics:
 # Macroeconomics, Health, Mix, Law and Crime, Culture, Other
@@ -12,47 +17,17 @@ paths:
 # Public Lands, Social Welfare, Civil Rights, Labor
 # Immigration, Housing, Defense, Education, -
 topics:
-  - Macroeconomics
-  - Health
-  - Mix
-  - Law and Crime
-  - Culture
-  - Other
-  - Agriculture
-  - Technology
-  - Energy
-  - Government Operations
-  - Environment
-  - Transportation
-  - International Affairs
-  - Domestic Commerce
-  - Foreign Trade
-  - Public Lands
-  - Social Welfare
-  - Civil Rights
-  - Labor
-  - Immigration
-  - Housing
-  - Defense
-  - Education
+  # Example
+  #- Health
 
-# Orientations to add to the dataset
+# Orientations filter
 
 # Possible party orientations:
 # Centre-right, Left, Centre, Centre to centre-left
 # Centre-left, Right to far-right, Big tent, -
 orientations:
-  - Centre-right
-  - Left
-  - Centre
-  - Centre to centre-left
-  - Centre-left
-  - Right to far-right
-  - Big tent
-  - "-" # Undefined orientation
 
-# Years to include: only these years will be processed
+# Years filter
 
-# leave empty if want to process all years
 # dataset goes from 2013-2022
 years:

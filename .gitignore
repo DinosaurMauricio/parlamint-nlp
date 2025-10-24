@@ -1,4 +1,5 @@
-dataset/*
+data/*
+assets/*
 
 __pycache__/
 *.py[cod]

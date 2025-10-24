@@ -3,7 +3,7 @@ import pandas as pd
 
 from conllu import parse_incr
 
-from constants import TXT_EXT, ANA_META_EXT, META_EXT, CONLLU_EXT
+from utils.constants import TXT_EXT, ANA_META_EXT, META_EXT, CONLLU_EXT
 from utils.filters import filter_meta, filter_years
 
 
@@ -19,9 +19,6 @@ class ParlaMintFileLoader:
                 extension of file
             years_to_filter:
                 the years we want to filter, default set to None
-            extension:
-                the extension of the files we want to load (.txt, .conllu, etc)
-
         Returns:
             list[dict]:
                 A list of dictionaries, each containing:
@@ -31,7 +28,7 @@ class ParlaMintFileLoader:
                         "number_of_files": total files for that year
                     }
         """
-        years_folders = ParlaMintFileLoader.list_year_folders(path)
+        years_folders = ParlaMintFileLoader.get_year_folders_list(path)
         years_folders = filter_years(years_folders, years_to_filter)
 
         loaded_files_dict, _ = ParlaMintFileLoader.load_file_names_by_years(
@@ -93,7 +90,7 @@ class ParlaMintFileLoader:
         return pd.DataFrame(data)
 
     @staticmethod
-    def list_year_folders(path):
+    def get_year_folders_list(path):
         years_folders = os.listdir(path)
         # could just delete the file... but its fine like this
         if "00README.txt" in years_folders:
@@ -108,6 +105,8 @@ class ParlaMintFileLoader:
             [
                 "Text_ID",
                 "ID",
+                "Date",
+                "Speaker_party",
                 "Party_orientation",
                 "Speaker_ID",
                 "Speaker_name",
@@ -122,7 +121,7 @@ class ParlaMintFileLoader:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
         df_ana_meta = ParlaMintFileLoader.load_tsv_file(
-            path + ANA_META_EXT, ["ID", "Parent_ID", "Words", "Tokens"]
+            path + ANA_META_EXT, ["ID", "Parent_ID", "Words"]
         )
         df_segment_data = ParlaMintFileLoader.load_segments_sentiment_data(
             path + CONLLU_EXT
@@ -130,8 +129,12 @@ class ParlaMintFileLoader:
 
         return df_meta, df_ana_meta, df_segment_data
 
-    # NOTE: segments include non-verbal cues (e.g. [[Applause.]]) # raw text doesn't.
-    # Won't delete this till I get a better idea whats best lol
+    # NOTE: text files include non-verbal cues
+    # the segment text from conllu does not, won't delete this till I get a better idea whats best lol
+    # There are 13,335 different cues on the Italian corpus
+    # e.g. of these non-verbal cues:
+    # [[Applause.]], [[He stands up.]] [[The microphone automatically switches off]])
+    # [[Applause from the Mixed Group and Senator {name}]].
     @staticmethod
     def load_texts(path):
         df_uttrances = pd.read_csv(

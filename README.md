@@ -7,7 +7,7 @@ The goal is to understand the dataset and prepare for future tasks. Some ideas t
 ## Todo ✅
 
 - [x] Understand dataset structure and metadata
-- [ ] Build a simple interactive dashboard to explore the data
+- [x] Build a simple interactive dashboard to explore the data
 
   - Note: Still WIP but moved to [parlamint-visual-dashboard](https://github.com/DinosaurMauricio/parlamint-visual-dashboard)
 

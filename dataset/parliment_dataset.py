@@ -6,7 +6,7 @@ from tqdm import tqdm
 from utils.file_loader import ParlaMintFileLoader
 from utils.merge_helper import merge_data_frames, process_df_samples
 
-from constants import CONLLU_EXT
+from utils.constants import CONLLU_EXT
 
 
 class ParlimentDataset(torch.utils.data.Dataset):

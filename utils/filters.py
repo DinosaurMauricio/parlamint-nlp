@@ -10,5 +10,5 @@ def filter_meta(df_meta, topics=None, orientations=None):
 def filter_years(years_folders, years=None):
     # filtering years folders, setting is set on the config.yaml
     if years:
-        years_folders = list(set(years) & set(years_folders))
+        years_folders = list(set(years_folders) - set(years))
     return years_folders
