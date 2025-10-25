@@ -6,7 +6,7 @@ from conllu import parse_incr
 from dataclasses import dataclass
 
 from utils.constants import TXT_EXT, ANA_META_EXT, META_EXT, CONLLU_EXT
-from utils.filters import filter_meta, filter_years
+from utils.filters import UtilityFilter
 from utils.merge_helper import merge_data_frames
 
 
@@ -31,7 +31,6 @@ class ParlaMintFileLoader:
                 - tuple: (total_files_loaded, total_num_utt)
         """
         total_num_utt = 0
-        total_files_skipped = 0
         dfs = []
 
         loaded_files_dict = self._get_yearly_files(CONLLU_EXT)
@@ -74,7 +73,7 @@ class ParlaMintFileLoader:
                     }
         """
         years_folders = self._get_year_folders_list()
-        years_folders = filter_years(years_folders, self.years)
+        years_folders = UtilityFilter.filter_years(years_folders, self.years)
 
         loaded_files_dict, _ = self._load_file_names_by_years(years_folders, extension)
         return loaded_files_dict
@@ -141,7 +140,7 @@ class ParlaMintFileLoader:
             ],
         )
 
-        df_meta = filter_meta(df_meta, self.topics, self.orientations)
+        df_meta = UtilityFilter.filter_meta(df_meta, self.topics, self.orientations)
 
         if df_meta.empty:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()

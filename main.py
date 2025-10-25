@@ -1,7 +1,7 @@
 # import argparse
 import os
 from omegaconf import OmegaConf
-from dataset.parliment_dataset import ParlimentDataset
+from dataset.parliment import ParlimentDataset
 
 # parser = argparse.ArgumentParser(description="ParlaParla Project")
 
