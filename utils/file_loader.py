@@ -1,24 +1,69 @@
 import os
 import pandas as pd
 
+from tqdm import tqdm
 from conllu import parse_incr
+from dataclasses import dataclass
 
 from utils.constants import TXT_EXT, ANA_META_EXT, META_EXT, CONLLU_EXT
 from utils.filters import filter_meta, filter_years
+from utils.merge_helper import merge_data_frames
+
+
+@dataclass
+class FileLoaderStats:
+    tottal_utterances: int
+    files_processed: int
 
 
 class ParlaMintFileLoader:
-    @staticmethod
-    def get_yearly_files(path, extension, years_to_filter=None):
+    def __init__(self, config):
+        self.base_path = config.paths.conllu
+        self.years = config.years
+        self.topics = config.topics
+        self.orientations = config.orientations
+
+    def load_samples(self):
+        """
+        Returns:
+            tuple:
+                - pd.DataFrame: processed data
+                - tuple: (total_files_loaded, total_num_utt)
+        """
+        total_num_utt = 0
+        total_files_skipped = 0
+        dfs = []
+
+        loaded_files_dict = self._get_yearly_files(CONLLU_EXT)
+        total_files_loaded = self._count_files(loaded_files_dict)
+
+        for files_dict in loaded_files_dict:
+            files, year, number_of_files = files_dict.values()
+            progres_bar_folder = tqdm(
+                files, desc=f"Processing Files [{year}] : ", total=number_of_files
+            )
+
+            for file in progres_bar_folder:
+
+                df = self._load_file_data(file, year)
+
+                if df.empty:
+                    continue
+
+                total_num_utt += df.shape[0]
+
+                dfs.append(df)
+
+        final_df = pd.concat(dfs, ignore_index=True)
+
+        return final_df, FileLoaderStats(total_num_utt, total_files_loaded)
+
+    def _get_yearly_files(
+        self,
+        extension,
+    ):
         """
         Collects all file names grouped by year.
-        Args:
-            str:
-                path to files
-            str:
-                extension of file
-            years_to_filter:
-                the years we want to filter, default set to None
         Returns:
             list[dict]:
                 A list of dictionaries, each containing:
@@ -28,24 +73,29 @@ class ParlaMintFileLoader:
                         "number_of_files": total files for that year
                     }
         """
-        years_folders = ParlaMintFileLoader.get_year_folders_list(path)
-        years_folders = filter_years(years_folders, years_to_filter)
+        years_folders = self._get_year_folders_list()
+        years_folders = filter_years(years_folders, self.years)
 
-        loaded_files_dict, _ = ParlaMintFileLoader.load_file_names_by_years(
-            path, years_folders, extension
-        )
+        loaded_files_dict, _ = self._load_file_names_by_years(years_folders, extension)
         return loaded_files_dict
 
-    @staticmethod
-    def load_file_names_by_years(path, years, extension):
+    def _count_files(self, loaded_files_dict):
+        return sum([files_dict["number_of_files"] for files_dict in loaded_files_dict])
+
+    def _get_year_folders_list(self):
+        years_folders = os.listdir(self.base_path)
+        # could just delete the file... but its fine like this
+        if "00README.txt" in years_folders:
+            years_folders.remove("00README.txt")
+        return years_folders
+
+    def _load_file_names_by_years(self, years, extension):
         file_names_by_year = []
         total_files = 0
 
         for year in years:
-            path_with_year = os.path.join(path, year)
-            files, number_of_files = ParlaMintFileLoader.load_file_names(
-                path_with_year, extension
-            )
+            path_with_year = os.path.join(self.base_path, year)
+            files, number_of_files = self._load_file_names(path_with_year, extension)
 
             total_files += number_of_files
 
@@ -54,16 +104,57 @@ class ParlaMintFileLoader:
             )
         return file_names_by_year, total_files
 
-    @staticmethod
-    def load_file_names(path, extension):
-        dirs = os.listdir(path)
+    def _load_file_names(self, full_path, extension):
+        dirs = os.listdir(full_path)
         files = (file[: -len(extension)] for file in dirs if file.endswith(extension))
         # divide by 3 because each date is compsed by 3 files (.conllu, . meta and .ana-meta)
         number_of_files = len(dirs) / 3
         return files, number_of_files
 
+    def _load_file_data(self, file, year):
+        temp_path = os.path.join(self.base_path, year, file)
+
+        df_meta, df_ana_meta, df_segment_data = self._load_parlamint_records(temp_path)
+
+        if df_meta.empty:
+            return pd.DataFrame()
+
+        df = merge_data_frames(df_meta, df_ana_meta, df_segment_data)
+
+        # attach year
+        df["year"] = year
+        return df
+
+    def _load_parlamint_records(self, path):
+        df_meta = ParlaMintFileLoader._load_tsv_file(
+            path + META_EXT,
+            [
+                "Text_ID",
+                "ID",
+                "Date",
+                "Speaker_party",
+                "Party_orientation",
+                "Speaker_ID",
+                "Speaker_name",
+                "Speaker_gender",
+                "Topic",
+            ],
+        )
+
+        df_meta = filter_meta(df_meta, self.topics, self.orientations)
+
+        if df_meta.empty:
+            return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+        df_ana_meta = ParlaMintFileLoader._load_tsv_file(
+            path + ANA_META_EXT, ["ID", "Parent_ID", "Words"]
+        )
+        df_segment_data = self._load_segments_sentiment_data(path + CONLLU_EXT)
+
+        return df_meta, df_ana_meta, df_segment_data
+
     @staticmethod
-    def load_tsv_file(file_path, columns):
+    def _load_tsv_file(file_path, columns):
         return pd.read_csv(
             file_path,
             sep="\t",
@@ -71,7 +162,10 @@ class ParlaMintFileLoader:
         )
 
     @staticmethod
-    def load_segments_sentiment_data(file_path):
+    def _load_segments_sentiment_data(file_path):
+        """
+        Load sentiment data from CoNLL-U formatted file.
+        """
         data = []
 
         with open(file_path, encoding="utf-8") as f:
@@ -88,46 +182,6 @@ class ParlaMintFileLoader:
                     }
                 )
         return pd.DataFrame(data)
-
-    @staticmethod
-    def get_year_folders_list(path):
-        years_folders = os.listdir(path)
-        # could just delete the file... but its fine like this
-        if "00README.txt" in years_folders:
-            years_folders.remove("00README.txt")
-        return years_folders
-
-    @staticmethod
-    def load_parlamint_records(path, config):
-
-        df_meta = ParlaMintFileLoader.load_tsv_file(
-            path + META_EXT,
-            [
-                "Text_ID",
-                "ID",
-                "Date",
-                "Speaker_party",
-                "Party_orientation",
-                "Speaker_ID",
-                "Speaker_name",
-                "Speaker_gender",
-                "Topic",
-            ],
-        )
-
-        df_meta = filter_meta(df_meta, config.topics, config.orientations)
-
-        if df_meta.empty:
-            return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-        df_ana_meta = ParlaMintFileLoader.load_tsv_file(
-            path + ANA_META_EXT, ["ID", "Parent_ID", "Words"]
-        )
-        df_segment_data = ParlaMintFileLoader.load_segments_sentiment_data(
-            path + CONLLU_EXT
-        )
-
-        return df_meta, df_ana_meta, df_segment_data
 
     # NOTE: text files include non-verbal cues
     # the segment text from conllu does not, won't delete this till I get a better idea whats best lol
