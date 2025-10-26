@@ -7,28 +7,10 @@ from utils.filters import DataFilter
 
 
 class ParlimentDataset(torch.utils.data.Dataset):
-    def __init__(self, config):
-        self.config = config
-
-        if os.path.exists(config.paths.preprocessed_data) and config.load_preprocessed:
-            samples = pd.read_parquet(config.paths.preprocessed_data)
-        else:
-            loader = ParlaMintFileLoader(config)
-            samples, _ = loader.load_samples()
-
-        self.samples = (
-            DataFilter(samples)
-            .select_columns(
-                ["sent_id", "ID_meta", "text", "Party_orientation", "Words"]
-            )
-            .replace_hyphen_with_undefined("Party_orientation")
-            .drop_duplicate_texts()
-            .filter_nonempty_rows()
-            .filter_by_threshold(
-                "Words", config.dataset.word_count.min, config.dataset.word_count.max
-            )
-            .apply()
-        )
+    def __init__(self, data, tokenizer):
+        self.samples = data
+        self.tokenizer = tokenizer
+        self.data_classes = self.samples["Party_orientation"].to_dict()
 
     def __len__(self):
         return len(self.samples)
