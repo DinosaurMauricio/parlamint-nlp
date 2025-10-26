@@ -1,9 +1,8 @@
-# import argparse
 import os
 from omegaconf import OmegaConf
+from functools import partial
+from utils.data import load_data, DataPipeline
 from dataset.parliment import ParlimentDataset
-
-# parser = argparse.ArgumentParser(description="ParlaParla Project")
 
 
 if __name__ == "__main__":
@@ -13,5 +12,9 @@ if __name__ == "__main__":
 
     print(f"Config:\n\n{OmegaConf.to_yaml(config)}")
 
-    dataset = ParlimentDataset(config)
-    print(len(dataset))
+    print("Loading dataset...")
+    raw_data = load_data(config)
+    print(f"Loaded dataset... Samples loaded: {len(raw_data)} ")
+
+    pipeline = DataPipeline(config)
+    data = pipeline.prepare_dataset(raw_data)
