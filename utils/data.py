@@ -93,4 +93,8 @@ class DataPipeline:
             stratify=temp_df[column],
             random_state=seed,
         )
-        return train_df, val_df, test_df
+        return (
+            train_df.reset_index(drop=True),
+            val_df.reset_index(drop=True),
+            test_df.reset_index(drop=True),
+        )

@@ -7,6 +7,12 @@ paths:
 # Flag to load preprocessed, False if want to load from scratch and apply certain filters on data
 load_preprocessed: True
 
+llm:
+  model: "FacebookAI/roberta-base"
+
+train:
+  batch_size: 8
+
 # Dataset configuration, thresholds and parameters for preprocessing
 dataset:
   # Specifies which column the DatasetPipeline should use as the target label
