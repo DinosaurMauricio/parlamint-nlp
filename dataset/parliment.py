@@ -34,4 +34,9 @@ class ParlimentDataset(torch.utils.data.Dataset):
             sample.Party_orientation
         ]
 
-        return tokenized_text, orientation_label
+        result = {
+            "tokenized_text": tokenized_text,
+            "label": orientation_label,
+        }
+
+        return result

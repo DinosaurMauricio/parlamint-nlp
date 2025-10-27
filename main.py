@@ -1,14 +1,18 @@
 import os
+import torch
+import torch.nn as nn
+
+from transformers import AutoModel
 from omegaconf import OmegaConf
-from functools import partial
+from tqdm import tqdm
+
 from utils.data import load_data, DataPipeline
-from dataset.parliment import ParlimentDataset
-from transformers import RobertaTokenizer
-from torch.utils.data import DataLoader
+from utils.collate import collate_fn
+from model.classification import ClassificationParlamint
+from utils.data_module import ParliamentDataModule
 
 
 if __name__ == "__main__":
-
     PATH_PROJECT = os.path.dirname(os.path.abspath(__file__))
     config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
 
@@ -19,18 +23,15 @@ if __name__ == "__main__":
     print(f"Loaded dataset... Samples loaded: {len(raw_data)} ")
 
     pipeline = DataPipeline(config)
-    data = pipeline.prepare_dataset(raw_data)
+    data, class_weights = pipeline.prepare_dataset(raw_data)
 
-    tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
-    dataset_partial = partial(ParlimentDataset, tokenizer=tokenizer)
+    data_module = ParliamentDataModule(config, data, collate_fn)
 
-    train_dataset = dataset_partial(data["train"])
-    val_dataset = dataset_partial(data["val"])
-    test_dataset = dataset_partial(data["test"])
+    print("Prepearing data loaders...")
+    data_loaders = data_module.get_dataloaders()
 
-    train_loader = DataLoader(
-        train_dataset, batch_size=config.train.batch_size, shuffle=False
-    )
+    encoder = AutoModel.from_pretrained(config.llm.model)
 
-    it_train_loader = iter(train_loader)
-    sample = next(it_train_loader)
+    model = ClassificationParlamint(encoder, len(data_module.orientation_labels))
+    loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(class_weights))
+    optimizer = torch.optim.AdamW(lr=config.training.lr, params=model.parameters())

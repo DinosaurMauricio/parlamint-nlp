@@ -10,8 +10,11 @@ load_preprocessed: True
 llm:
   model: "FacebookAI/roberta-base"
 
-train:
+# training settings
+training:
   batch_size: 8
+  lr: 1e-3
+  epochs: 20
 
 # Dataset configuration, thresholds and parameters for preprocessing
 dataset:
@@ -22,8 +25,8 @@ dataset:
     min: 5
     max: 70
   sampling:
-    enabled: False
-    max_samples: 1000
+    enabled: True
+    max_samples: 10
 
 # FILTERS
 # Add filters to remove data from being processed. Leave filter emtpy to process everything

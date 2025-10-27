@@ -48,8 +48,7 @@ class DataPipeline:
             "train": train_df,
             "val": val_df,
             "test": test_df,
-            "class_weights": class_weights,
-        }
+        }, class_weights
 
     def _filter_data(self, df, word_count_min, word_count_max):
         return (

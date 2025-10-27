@@ -11,4 +11,5 @@ The goal is to understand the dataset and prepare for future tasks. Some ideas t
 
   - Note: Still WIP but moved to [parlamint-visual-dashboard](https://github.com/DinosaurMauricio/parlamint-visual-dashboard)
 
-- [ ] Identify potential future AI task to study: sentiment, stance, topic modeling, other
+- [ ] Train initial model using a pretrained LLM (e.g., RoBERTa)
+- [ ] Experiment with sentence embeddings for faster and simpler training
