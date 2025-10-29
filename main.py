@@ -6,6 +6,7 @@ from transformers import AutoModel
 from omegaconf import OmegaConf
 from tqdm import tqdm
 from transformers import RobertaTokenizer
+from transformers import get_linear_schedule_with_warmup
 
 from utils.data import load_data, DataPipeline
 from utils.collate import collate_fn
@@ -44,9 +45,21 @@ if __name__ == "__main__":
 
     # TODO: Set ignore index, set pad token in config or constnts.
     loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device).float())
-    # TODO: add weight decay if needed
-    optimizer = torch.optim.AdamW(lr=config.training.lr, params=model.parameters())
+    optimizer = torch.optim.AdamW(
+        lr=config.training.lr,
+        params=model.parameters(),
+        weight_decay=config.training.weight_decay,
+    )
+    num_training_steps = len(data_loaders["train"]) * config.training.epochs
+    num_warmup_steps = int(0.05 * num_training_steps)
 
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=num_warmup_steps,
+        num_training_steps=num_training_steps,
+    )
+
+    # TODO: Move this to a class...
     # TODO: Add early stopping
     train_loss_list = []
     val_loss_list = []
@@ -63,7 +76,7 @@ if __name__ == "__main__":
 
             inputs, labels = batch
             inputs = {k: v.to(device) for k, v in inputs.items()}
-            labels.to(device)
+            labels = labels.to(device)
 
             outputs = model(**inputs)
 
@@ -72,7 +85,7 @@ if __name__ == "__main__":
             loss.backward()
 
             optimizer.step()
-            train_bar.set_postfix(train=f"Loss: {train_loss:.4f}")
+            train_bar.set_postfix(train=f"Loss: {loss.item():.4f}")
         avg_train_loss = train_loss / len(data_loaders["train"])
         train_loss_list.append(avg_train_loss)
 
@@ -95,7 +108,8 @@ if __name__ == "__main__":
                 loss = loss_fn(outputs, labels)
                 val_loss += loss.item()
 
-                val_bar.set_postfix(val=f"Loss: {val_loss:.4f}")
+                val_bar.set_postfix(val=f"Loss: {loss.item():.4f}")
 
         avg_val_loss = val_loss / len(data_loaders["val"])
         val_loss_list.append(avg_val_loss)
+        scheduler.step()
