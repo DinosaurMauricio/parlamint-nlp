@@ -16,8 +16,10 @@ from utils.data_module import ParliamentDataModule
 if __name__ == "__main__":
     PATH_PROJECT = os.path.dirname(os.path.abspath(__file__))
     config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
-
     print(f"Config:\n\n{OmegaConf.to_yaml(config)}")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Device: {device}")
 
     print("Loading dataset...")
     raw_data = load_data(config)
@@ -38,11 +40,14 @@ if __name__ == "__main__":
     data_loaders = data_module.get_dataloaders()
 
     model = ClassificationParlamint(encoder, len(data_module.orientation_labels))
+    model.to(device)
+
     # TODO: Set ignore index, set pad token in config or constnts.
-    loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).float())
+    loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device).float())
     # TODO: add weight decay if needed
     optimizer = torch.optim.AdamW(lr=config.training.lr, params=model.parameters())
 
+    # TODO: Add early stopping
     train_loss_list = []
     val_loss_list = []
     for epoch in range(0, config.training.epochs):
@@ -57,6 +62,9 @@ if __name__ == "__main__":
             optimizer.zero_grad()
 
             inputs, labels = batch
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+            labels.to(device)
+
             outputs = model(**inputs)
 
             loss = loss_fn(outputs, labels)
@@ -79,6 +87,9 @@ if __name__ == "__main__":
             )
             for batch in val_bar:
                 inputs, labels = batch
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                labels = labels.to(device)
+
                 outputs = model(**inputs)
 
                 loss = loss_fn(outputs, labels)
