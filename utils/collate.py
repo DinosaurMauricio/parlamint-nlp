@@ -22,10 +22,10 @@ def collate_fn(batch):
         )
         labels.append(sample["label"])
 
-    batch = {
+    inputs = {
         "input_ids": torch.tensor(input_ids_list, dtype=torch.long),
         "attention_mask": torch.tensor(attention_mask_list, dtype=torch.long),
-        "labels": torch.tensor(labels, dtype=torch.long),
     }
+    labels = torch.tensor(labels, dtype=torch.long)
 
-    return batch
+    return inputs, labels

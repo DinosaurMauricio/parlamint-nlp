@@ -1,14 +1,12 @@
 from torch.utils.data import DataLoader
-from transformers import RobertaTokenizer
 from dataset.parliment import ParlimentDataset
 from functools import partial
 
 
 class ParliamentDataModule:
-    def __init__(self, config, data, collate_fn):
+    def __init__(self, config, data, tokenizer, collate_fn):
         self.config = config
-        # TODO: Decouple this so any tokenizer can be passed in, instead of hardcoding it here
-        self.tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
+        self.tokenizer = tokenizer
         self.data = data
         self.collate_fn = collate_fn
         self.batch_size = config.training.batch_size
