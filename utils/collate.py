@@ -1,7 +1,7 @@
 import torch
 
 
-def collate_fn(batch):
+def collate_fn(batch, pad_token_id):
     input_tokens = [e["tokenized_text"]["input_ids"] for e in batch]
     input_tokens_maxlen = max([len(t.squeeze()) for t in input_tokens])
 
@@ -14,7 +14,8 @@ def collate_fn(batch):
             sample["tokenized_text"]["input_ids"].squeeze()
         )
         input_ids_list.append(
-            sample["tokenized_text"]["input_ids"].squeeze().tolist() + pad_len * [1]
+            sample["tokenized_text"]["input_ids"].squeeze().tolist()
+            + pad_len * [pad_token_id]
         )  # Pad token is 1
         attention_mask_list.append(
             sample["tokenized_text"]["attention_mask"].squeeze().tolist()

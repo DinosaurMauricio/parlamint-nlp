@@ -13,8 +13,8 @@ class ClassificationParlamint(nn.Module):
             param.requires_grad = False
 
         # Unfreeze last two layers
-        for param in self.encoder.encoder.layer[-2:].parameters():
-            param.requires_grad = True
+        # for param in self.encoder.encoder.layer[-2:].parameters():
+        #    param.requires_grad = True
 
         hidden_size = self.encoder.config.hidden_size  # 768
 

@@ -1,12 +1,8 @@
 import os
 import torch
 import torch.nn as nn
-
-from transformers import AutoModel
 from omegaconf import OmegaConf
-from tqdm import tqdm
-from transformers import RobertaTokenizer
-from transformers import get_linear_schedule_with_warmup
+from transformers import RobertaTokenizer, AutoModel, get_linear_schedule_with_warmup
 
 from utils.data import load_data, DataPipeline
 from utils.collate import collate_fn
@@ -55,8 +51,10 @@ if __name__ == "__main__":
         f"Total parameters: {total_params} \nTrainable parameters: {trainable_params}"
     )
 
-    # TODO: Set ignore index, set pad token in config or constnts.
-    loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device).float())
+    loss_fn = nn.CrossEntropyLoss(
+        weight=torch.tensor(class_weights).to(device).float(),
+        ignore_index=tokenizer.pad_token_id,
+    )
     optimizer = torch.optim.AdamW(
         lr=config.training.lr,
         params=model.parameters(),

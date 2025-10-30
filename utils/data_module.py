@@ -8,8 +8,8 @@ class ParliamentDataModule:
         self.config = config
         self.tokenizer = tokenizer
         self.data = data
-        self.collate_fn = collate_fn
         self.batch_size = config.training.batch_size
+        self.collate_fn = partial(collate_fn, pad_token_id=tokenizer.pad_token_id)
 
         dataset_partial = partial(ParlimentDataset, tokenizer=self.tokenizer)
 
