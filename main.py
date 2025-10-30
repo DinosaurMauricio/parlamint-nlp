@@ -4,11 +4,11 @@ import torch.nn as nn
 from omegaconf import OmegaConf
 from transformers import RobertaTokenizer, AutoModel, get_linear_schedule_with_warmup
 
-from utils.data import load_data, DataPipeline
+from utils.dataset_builder import load_data, DatasetBuilder
 from utils.collate import collate_fn
 from utils.seed import set_seed
 from model.classification import ClassificationParlamint
-from utils.data_module import ParliamentDataModule
+from utils.data_loader_builder import ParliamentDataLoaderBuilder
 from training.model_trainer import ModelTrainer
 
 
@@ -27,8 +27,8 @@ if __name__ == "__main__":
     raw_data = load_data(config)
     print(f"Loaded dataset... Samples loaded: {len(raw_data)} ")
 
-    pipeline = DataPipeline(config)
-    data, class_weights = pipeline.prepare_dataset(raw_data)
+    dataset_builder = DatasetBuilder(config)
+    data, class_weights = dataset_builder.prepare_dataset(raw_data)
 
     print("Loading encoder... ")
     tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
@@ -36,14 +36,18 @@ if __name__ == "__main__":
     encoder = AutoModel.from_pretrained(config.llm.model)
     # encoder = DummyEncoder()
 
-    data_module = ParliamentDataModule(config, data, tokenizer, collate_fn)
+    dataloader_builder = ParliamentDataLoaderBuilder(
+        config, data, tokenizer, collate_fn
+    )
 
     print("Prepearing data loaders...")
-    data_loaders = data_module.get_dataloaders()
+    data_loaders = dataloader_builder.get_dataloaders()
 
     print("Loading model...")
     model = ClassificationParlamint(
-        encoder, len(data_module.orientation_labels), unfreeze=config.training.unfreeze
+        encoder,
+        len(dataloader_builder.orientation_labels),
+        unfreeze=config.training.unfreeze,
     )
     model.to(device)
 

@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import pandas as pd
 from utils.file_loader import ParlaMintFileLoader
 from utils.filters import DataFilter
@@ -15,7 +14,7 @@ def load_data(config):
     return pd.DataFrame(samples)
 
 
-class DataPipeline:
+class DatasetBuilder:
     def __init__(self, config):
         self.config = config
 
@@ -79,7 +78,7 @@ class DataPipeline:
 
     def _compute_class_weights(self, df, column):
         return compute_class_weight(
-            "balanced", classes=np.unique(df[column]), y=df[column]
+            "balanced", classes=df[column].unique(), y=df[column]
         )
 
     def _split_data(self, df, column, seed=42):

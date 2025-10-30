@@ -3,7 +3,7 @@ from dataset.parliment import ParlimentDataset
 from functools import partial
 
 
-class ParliamentDataModule:
+class ParliamentDataLoaderBuilder:
     def __init__(self, config, data, tokenizer, collate_fn):
         self.config = config
         self.tokenizer = tokenizer
