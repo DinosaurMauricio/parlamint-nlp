@@ -10,6 +10,7 @@ from transformers import get_linear_schedule_with_warmup
 
 from utils.data import load_data, DataPipeline
 from utils.collate import collate_fn
+from utils.seed import set_seed
 from model.classification import ClassificationParlamint
 from utils.data_module import ParliamentDataModule
 from training.trainer import Trainer
@@ -20,8 +21,11 @@ if __name__ == "__main__":
     config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
     print(f"Config:\n\n{OmegaConf.to_yaml(config)}")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
+
+    set_seed(config.training.seed)
+    print(f"Seed: {config.training.seed}")
 
     print("Loading dataset...")
     raw_data = load_data(config)
@@ -41,8 +45,15 @@ if __name__ == "__main__":
     print("Prepearing data loaders...")
     data_loaders = data_module.get_dataloaders()
 
+    print("Loading model...")
     model = ClassificationParlamint(encoder, len(data_module.orientation_labels))
     model.to(device)
+
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(
+        f"Total parameters: {total_params} \nTrainable parameters: {trainable_params}"
+    )
 
     # TODO: Set ignore index, set pad token in config or constnts.
     loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(class_weights).to(device).float())

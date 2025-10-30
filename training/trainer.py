@@ -11,6 +11,8 @@ class Trainer:
         self.loss_fn = loss_fn
         self.device = device
 
+        self.scaler = torch.GradScaler(device=device)
+
         self.train_losses = []
         self.val_losses = []
         self.train_accuracies = []
@@ -19,7 +21,7 @@ class Trainer:
     def train_epoch(self, dataloader, epoch):
         self.model.train()
         total_loss = 0.0
-        correct_predictions = 0
+        tot_correct_predictions = 0
         total_samples = 0
 
         train_bar = tqdm(
@@ -33,11 +35,15 @@ class Trainer:
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             labels = labels.to(self.device)
 
-            outputs = self.model(**inputs)
-            loss = self.loss_fn(outputs, labels)
+            with torch.autocast(
+                device_type=self.device,
+                dtype=torch.bfloat16,
+                enabled=self.scaler.is_enabled(),
+            ):
+                outputs = self.model(**inputs)
+                loss = self.loss_fn(outputs, labels)
 
-            loss.backward()
-            self.optimizer.step()
+            self._apply_gradient(loss)
 
             total_loss += loss.item()
 
@@ -47,7 +53,7 @@ class Trainer:
             train_bar.set_postfix(loss=f"{loss.item():.4f}")
 
         avg_loss = total_loss / len(dataloader)
-        avg_accuracy = correct_predictions / total_samples
+        avg_accuracy = tot_correct_predictions / total_samples
         return avg_loss, avg_accuracy
 
     def validate_epoch(self, dataloader, epoch):
@@ -101,6 +107,15 @@ class Trainer:
             "train_accuracies": self.train_accuracies,
             "val_accuracies": self.val_accuracies,
         }
+
+    def _apply_gradient(self, loss):
+        if self.scaler.is_enabled():
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+        else:
+            loss.backward()
+            self.optimizer.step()
 
     def _calcualte_accuracy(self, outputs, labels):
         predictions = torch.argmax(outputs, dim=1)

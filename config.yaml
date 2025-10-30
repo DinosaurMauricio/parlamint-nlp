@@ -12,6 +12,7 @@ llm:
 
 # training settings
 training:
+  seed: 42
   batch_size: 8
   lr: 1e-3
   epochs: 20
