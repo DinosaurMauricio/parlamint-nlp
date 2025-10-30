@@ -18,11 +18,11 @@ The goal is to understand the dataset and prepare for future tasks. Some ideas t
 ```
 parlamint-nlp/
 │
-├─ dataset/ # Dataset classes
-├─ model/ # Model definitions
-├─ notebooks/ # Jupyter notebooks to experiment with the data
-├─ training/ # Class for model training and validation.
-├─ utils/ # Helper functions and utilities (file loader, collate, seed, etc.)
-├─ config.yaml # Hyperparameters and configuration
+├─ dataset/     # Dataset classes
+├─ model/       # Model definitions
+├─ notebooks/   # Jupyter notebooks to experiment with the data
+├─ training/    # Class for model training and validation.
+├─ utils/       # Helper functions and utilities (file loader, collate, seed, etc.)
+├─ config.yaml  # Hyperparameters and configuration
 └─ main.py
 ```
