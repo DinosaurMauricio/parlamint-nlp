@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 
 
-class Trainer:
+class ModelTrainer:
 
     def __init__(self, model, optimizer, scheduler, loss_fn, device):
         self.model = model

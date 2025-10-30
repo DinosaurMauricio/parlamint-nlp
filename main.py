@@ -13,7 +13,7 @@ from utils.collate import collate_fn
 from utils.seed import set_seed
 from model.classification import ClassificationParlamint
 from utils.data_module import ParliamentDataModule
-from training.trainer import Trainer
+from training.model_trainer import ModelTrainer
 
 
 if __name__ == "__main__":
@@ -79,5 +79,5 @@ if __name__ == "__main__":
         "device": device,
     }
 
-    trainer = Trainer(**args)
+    trainer = ModelTrainer(**args)
     trainer.train(data_loaders, config.training.epochs)
