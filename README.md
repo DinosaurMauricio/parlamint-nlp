@@ -11,5 +11,18 @@ The goal is to understand the dataset and prepare for future tasks. Some ideas t
 
   - Note: Still WIP but moved to [parlamint-visual-dashboard](https://github.com/DinosaurMauricio/parlamint-visual-dashboard)
 
-- [ ] Train initial model using a pretrained LLM (e.g., RoBERTa)
-- [ ] Experiment with sentence embeddings for faster and simpler training
+- [ ] Experiment multi-classification using a pretrained LLM (e.g., RoBERTa).
+- [ ] Optimize code to have reusable components to use in Colab, no other way to run it :(
+- [ ] Explore ideas other ideas
+
+```
+parlamint-nlp/
+│
+├─ dataset/ # Dataset classes
+├─ model/ # Model definitions
+├─ notebooks/ # Jupyter notebooks to experiment with the data
+├─ training/ # Class for model training and validation.
+├─ utils/ # Helper functions and utilities (file loader, collate, seed, etc.)
+├─ config.yaml # Hyperparameters and configuration
+└─ main.py
+```
