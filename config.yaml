@@ -15,6 +15,7 @@ training:
   batch_size: 8
   lr: 1e-3
   epochs: 20
+  weight_decay: 0.01
 
 # Dataset configuration, thresholds and parameters for preprocessing
 dataset:

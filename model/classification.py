@@ -15,7 +15,13 @@ class ClassificationParlamint(nn.Module):
         hidden_size = self.encoder.config.hidden_size  # 768
 
         self.dropout = nn.Dropout(dropout)
-        self.classifier = nn.Linear(hidden_size, num_classes)
+
+        self.classifier = nn.Sequential(
+            nn.Linear(hidden_size, 256),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, num_classes),
+        )
 
     def forward(self, input_ids, attention_mask):
         outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
