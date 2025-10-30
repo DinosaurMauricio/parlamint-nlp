@@ -42,7 +42,9 @@ if __name__ == "__main__":
     data_loaders = data_module.get_dataloaders()
 
     print("Loading model...")
-    model = ClassificationParlamint(encoder, len(data_module.orientation_labels))
+    model = ClassificationParlamint(
+        encoder, len(data_module.orientation_labels), unfreeze=config.training.unfreeze
+    )
     model.to(device)
 
     total_params = sum(p.numel() for p in model.parameters())

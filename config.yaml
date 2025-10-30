@@ -17,6 +17,7 @@ training:
   lr: 1e-3
   epochs: 20
   weight_decay: 0.01
+  unfreeze: True
 
 # Dataset configuration, thresholds and parameters for preprocessing
 dataset:

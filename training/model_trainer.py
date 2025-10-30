@@ -111,10 +111,14 @@ class ModelTrainer:
     def _apply_gradient(self, loss):
         if self.scaler.is_enabled():
             self.scaler.scale(loss).backward()
+            # need to unscale the gradients of optimizer's before clipping
+            self.scaler.unscale_(self.optimizer)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
             self.scaler.step(self.optimizer)
             self.scaler.update()
         else:
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
             self.optimizer.step()
 
     def _calcualte_accuracy(self, outputs, labels):

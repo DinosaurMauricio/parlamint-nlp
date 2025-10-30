@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class ClassificationParlamint(nn.Module):
 
-    def __init__(self, encoder, num_classes, dropout=0.1):
+    def __init__(self, encoder, num_classes, unfreeze=False, dropout=0.1):
         super().__init__()
 
         self.encoder = encoder
@@ -13,8 +13,9 @@ class ClassificationParlamint(nn.Module):
             param.requires_grad = False
 
         # Unfreeze last two layers
-        # for param in self.encoder.encoder.layer[-2:].parameters():
-        #    param.requires_grad = True
+        if unfreeze:  # TODO: just to speed up in collab... delete after
+            for param in self.encoder.encoder.layer[-2:].parameters():
+                param.requires_grad = True
 
         hidden_size = self.encoder.config.hidden_size  # 768
 
