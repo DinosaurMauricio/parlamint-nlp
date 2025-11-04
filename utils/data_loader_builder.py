@@ -26,7 +26,3 @@ class ParliamentDataLoaderBuilder:
     def get_dataloaders(self):
         """Get dataloaders for all splits (train, val, test)."""
         return {split: self.get_dataloader(split) for split in self.data.keys()}
-
-    @property
-    def orientation_labels(self):
-        return self.datasets["train"].orientation_labels

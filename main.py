@@ -10,6 +10,7 @@ from utils.seed import set_seed
 from model.classification import ClassificationParlamint
 from utils.data_loader_builder import ParliamentDataLoaderBuilder
 from training.model_trainer import ModelTrainer
+from utils.label_encoder import LabelEncoder
 
 
 if __name__ == "__main__":
@@ -28,9 +29,22 @@ if __name__ == "__main__":
     print(f"Loaded dataset... Samples loaded: {len(raw_data)} ")
 
     dataset_builder = DatasetBuilder(config)
-    data, class_weights = dataset_builder.prepare_dataset(raw_data)
+    data = dataset_builder.prepare_dataset(raw_data)
 
-    print("Loading encoder... ")
+    print(f"Train samples: {len(data['train'])}")
+    print(f"Val samples: {len(data['val'])}")
+    print(f"Test samples: {len(data['test'])}")
+
+    print("Loading Labels...")
+    label_encoder = LabelEncoder()
+
+    class_weights = dataset_builder.compute_class_weights(
+        label_encoder.classes, data["train"]
+    )
+
+    print("Loading Encoder... ")
+    from dummy_classes import DummyEncoder, DummyTokenizer
+
     tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
     # tokenizer = DummyTokenizer()
     encoder = AutoModel.from_pretrained(config.llm.model)
@@ -46,7 +60,7 @@ if __name__ == "__main__":
     print("Loading model...")
     model = ClassificationParlamint(
         encoder,
-        len(dataloader_builder.orientation_labels),
+        len(label_encoder),
         unfreeze=config.training.unfreeze,
     )
     model.to(device)

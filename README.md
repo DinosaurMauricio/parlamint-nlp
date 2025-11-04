@@ -13,7 +13,9 @@ The goal is to understand the dataset and prepare for future tasks. Some ideas t
 
 - [ ] Experiment multi-classification using a pretrained LLM (e.g., RoBERTa).
 - [ ] Optimize code to have reusable components to use in Colab, no other way to run it :(
-- [ ] Explore ideas other ideas
+- [ ] Explore other ideas
+
+## File structure
 
 ```
 parlamint-nlp/

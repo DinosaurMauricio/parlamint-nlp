@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from utils.file_loader import ParlaMintFileLoader
+from utils.label_encoder import LabelEncoder
 from utils.filters import DataFilter
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
@@ -39,7 +40,10 @@ class DatasetBuilder:
             )
             print(f"After sampling: {len(data)} samples")
 
-        class_weights = self._compute_class_weights(data, column)
+        # Configure labels so it takes into account all possible lables
+        # from the data
+        label_encoder = LabelEncoder()
+        label_encoder.configure_labels(data[column].unique())
 
         train_df, test_df, val_df = self._split_data(data, column, seed)
 
@@ -47,7 +51,11 @@ class DatasetBuilder:
             "train": train_df,
             "val": val_df,
             "test": test_df,
-        }, class_weights
+        }
+
+    def compute_class_weights(self, ids, df):
+        column = self.config.dataset.target_column
+        return compute_class_weight("balanced", classes=ids, y=df[column])
 
     def _filter_data(self, df, word_count_min, word_count_max):
         return (
@@ -75,11 +83,6 @@ class DatasetBuilder:
                 sampled = temp_df.sample(n=max_samples, random_state=seed)
                 dfs.append(sampled)
         return pd.concat(dfs, ignore_index=True)
-
-    def _compute_class_weights(self, df, column):
-        return compute_class_weight(
-            "balanced", classes=df[column].unique(), y=df[column]
-        )
 
     def _split_data(self, df, column, seed=42):
         train_df, temp_df = train_test_split(
