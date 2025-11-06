@@ -10,9 +10,6 @@ load_preprocessed: True
 llm:
   model: "FacebookAI/roberta-base"
 
-use_wandb: True
-use_optuna: False
-
 # training settings
 training:
   seed: 42
@@ -24,6 +21,19 @@ training:
   classifier:
     hidden_dim: 256
     dropout: 0.1
+
+# parameters for optuna for training trials
+# if not using optuna this won't affect at all
+optuna:
+  batch_size: [8, 16, 32]
+  lr:
+    min: 1e-5
+    max: 1e-3
+  weight_decay:
+    min: 1e-5
+    max: 1e-2
+  classifier:
+    hidden_dim: [124, 256, 512, 1024]
 
 # Dataset configuration, thresholds and parameters for preprocessing
 dataset:

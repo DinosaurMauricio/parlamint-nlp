@@ -2,51 +2,46 @@ import os
 import torch
 import torch.nn as nn
 import wandb
-import optuna
-import json
+import argparse
 
 from omegaconf import OmegaConf
-from transformers import RobertaTokenizer, AutoModel, get_linear_schedule_with_warmup
 from wandb.sdk.lib.runid import generate_id
 
-from utils.dataset_builder import load_data, DatasetBuilder
+from utils.config import (
+    setup_optuna_trial,
+    setup_logging,
+    setup_optuna_study,
+    setup_model,
+    setup_encoder_tokenizer,
+    setup_scheduler,
+    setup_datasets,
+)
+from utils.dataset_builder import load_data
 from utils.collate import collate_fn
 from utils.seed import set_seed
 from utils.label_encoder import LabelEncoder
 from utils.data_loader_builder import ParliamentDataLoaderBuilder
-from model.classification import ClassificationParlamint
+
 from training.model_trainer import ModelTrainer
-from callbacks.optuna_callback import OptunaCallback
 
 PATH_PROJECT = os.path.dirname(os.path.abspath(__file__))
 PROJECT_NAME = "ParlaParla"
 WANDB_ID = generate_id()
+parser = argparse.ArgumentParser(description="ParlaParla")
+
+parser.add_argument("--log", action="store_true", help="Log to wandb")
+parser.add_argument("--optuna", action="store_true", help="Run optuna trials")
+parser.add_argument(
+    "--number_trials", type=int, default=5, help="Number of trial for optuna"
+)
 
 
-def setup(trial=None):
+def single_run(trial=None, use_wandb=False):
     config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
     print(f"Config:\n\n{OmegaConf.to_yaml(config)}")
 
-    optuna_callback = None
-    if trial:
-        lr = trial.suggest_float("lr", 1e-5, 1e-3, log=True)
-        optuna_callback = OptunaCallback(trial)
-    else:
-        lr = config.training.lr
-
-    wandb_callback = None
-    if config.use_wandb:
-        config_container = OmegaConf.to_container(config, resolve=True)
-        cfg_json = json.loads(json.dumps(config_container))
-        wandb.init(
-            project=PROJECT_NAME,
-            group=WANDB_ID,
-            config=cfg_json,
-            reinit="finish_previous",  # Allow to write a new logs on Wandb
-        )
-        # TODO: Depending how this progress it could be moved to a class
-        # use magic method __call__ and set other configs
-        wandb_callback = lambda metrics: wandb.log(metrics)
+    optuna_callback = setup_optuna_trial(config, trial)
+    wandb_callback = setup_logging(config, PROJECT_NAME, WANDB_ID, use_wandb)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
@@ -54,31 +49,16 @@ def setup(trial=None):
     set_seed(config.training.seed)
     print(f"Seed: {config.training.seed}")
 
-    print("Loading dataset...")
+    print("Loading data...")
     raw_data = load_data(config)
     print(f"Loaded dataset... Samples loaded: {len(raw_data)} ")
-
-    dataset_builder = DatasetBuilder(config)
-    data = dataset_builder.prepare_dataset(raw_data)
-
-    print(f"Train samples: {len(data['train'])}")
-    print(f"Val samples: {len(data['val'])}")
-    print(f"Test samples: {len(data['test'])}")
 
     print("Loading Labels...")
     label_encoder = LabelEncoder()
 
-    class_weights = dataset_builder.compute_class_weights(
-        label_encoder.classes, data["train"]
-    )
+    data, class_weights = setup_datasets(config, raw_data, label_encoder)
 
-    print("Loading Encoder... ")
-    from dummy_classes import DummyEncoder, DummyTokenizer
-
-    # tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
-    tokenizer = DummyTokenizer()
-    # encoder = AutoModel.from_pretrained(config.llm.model)
-    encoder = DummyEncoder()
+    encoder, tokenizer = setup_encoder_tokenizer(config)
 
     dataloader_builder = ParliamentDataLoaderBuilder(
         config, data, tokenizer, collate_fn
@@ -87,19 +67,8 @@ def setup(trial=None):
     print("Prepearing data loaders...")
     data_loaders = dataloader_builder.get_dataloaders()
 
-    print("Loading model...")
-    model = ClassificationParlamint(
-        encoder,
-        len(label_encoder),
-        config,
-    )
+    model = setup_model(config, encoder, label_encoder)
     model.to(device)
-
-    total_params = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(
-        f"Total parameters: {total_params} \nTrainable parameters: {trainable_params}"
-    )
 
     loss_fn = nn.CrossEntropyLoss(
         weight=torch.tensor(class_weights).to(device).float(),
@@ -110,13 +79,8 @@ def setup(trial=None):
         params=model.parameters(),
         weight_decay=config.training.weight_decay,
     )
-    num_training_steps = len(data_loaders["train"]) * config.training.epochs
-    num_warmup_steps = int(0.1 * num_training_steps)
-
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps=num_warmup_steps,
-        num_training_steps=num_training_steps,
+    scheduler = setup_scheduler(
+        len(data_loaders["train"]), config.training.epochs, optimizer
     )
 
     args = {
@@ -132,32 +96,32 @@ def setup(trial=None):
     trainer = ModelTrainer(**args)
     results = trainer.train(data_loaders, config.training.epochs)
 
-    if True:  # optuna
+    # optuna requires a val to maximize/minimize
+    # so in case a trial is sent we return this value
+    if trial:
         return min(results["val_losses"])
     else:
         return results
 
 
-def create_and_run_study(objective, number_trials=0):
-    study = optuna.create_study(
-        study_name="ParlaParla",
-        direction="minimize",
-    )
-    study.optimize(
-        objective,
-        n_trials=number_trials,
-    )
+def run_hpo(num_trials, log):
+    # hyperparameter optimization (hpo)
+    objective = lambda trial: single_run(trial, use_wandb=log)
+
+    study = setup_optuna_study(objective, num_trials)
+    print("Best params:")
+    print(study.best_params)
     return study
 
 
 if __name__ == "__main__":
-
-    use_optuna = True
-    if use_optuna:
-        trials = create_and_run_study(setup, 4)
-        print("Best params")
-        print(trials.best_params)
+    args = parser.parse_args()
+    if args.optuna:
+        print("Starting optuna trials...")
+        run_hpo(args.number_trials, args.log)
     else:
-        results = setup()
+        print("Single run...")
+        results = single_run(use_wandb=args.log)
 
-    wandb.finish()
+    if args.log:
+        wandb.finish()
