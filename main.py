@@ -1,8 +1,13 @@
 import os
 import torch
 import torch.nn as nn
+import wandb
+import optuna
+import json
+
 from omegaconf import OmegaConf
 from transformers import RobertaTokenizer, AutoModel, get_linear_schedule_with_warmup
+from wandb.sdk.lib.runid import generate_id
 
 from utils.dataset_builder import load_data, DatasetBuilder
 from utils.collate import collate_fn
@@ -11,12 +16,37 @@ from utils.label_encoder import LabelEncoder
 from utils.data_loader_builder import ParliamentDataLoaderBuilder
 from model.classification import ClassificationParlamint
 from training.model_trainer import ModelTrainer
+from callbacks.optuna_callback import OptunaCallback
+
+PATH_PROJECT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_NAME = "ParlaParla"
+WANDB_ID = generate_id()
 
 
-if __name__ == "__main__":
-    PATH_PROJECT = os.path.dirname(os.path.abspath(__file__))
+def setup(trial=None):
     config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
     print(f"Config:\n\n{OmegaConf.to_yaml(config)}")
+
+    optuna_callback = None
+    if trial:
+        lr = trial.suggest_float("lr", 1e-5, 1e-3, log=True)
+        optuna_callback = OptunaCallback(trial)
+    else:
+        lr = config.training.lr
+
+    wandb_callback = None
+    if config.use_wandb:
+        config_container = OmegaConf.to_container(config, resolve=True)
+        cfg_json = json.loads(json.dumps(config_container))
+        wandb.init(
+            project=PROJECT_NAME,
+            group=WANDB_ID,
+            config=cfg_json,
+            reinit="finish_previous",  # Allow to write a new logs on Wandb
+        )
+        # TODO: Depending how this progress it could be moved to a class
+        # use magic method __call__ and set other configs
+        wandb_callback = lambda metrics: wandb.log(metrics)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
@@ -45,10 +75,10 @@ if __name__ == "__main__":
     print("Loading Encoder... ")
     from dummy_classes import DummyEncoder, DummyTokenizer
 
-    tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
-    # tokenizer = DummyTokenizer()
-    encoder = AutoModel.from_pretrained(config.llm.model)
-    # encoder = DummyEncoder()
+    # tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
+    tokenizer = DummyTokenizer()
+    # encoder = AutoModel.from_pretrained(config.llm.model)
+    encoder = DummyEncoder()
 
     dataloader_builder = ParliamentDataLoaderBuilder(
         config, data, tokenizer, collate_fn
@@ -90,6 +120,8 @@ if __name__ == "__main__":
     )
 
     args = {
+        "hpo_callback": optuna_callback,
+        "log_callback": wandb_callback,
         "model": model,
         "optimizer": optimizer,
         "scheduler": scheduler,
@@ -98,4 +130,34 @@ if __name__ == "__main__":
     }
 
     trainer = ModelTrainer(**args)
-    trainer.train(data_loaders, config.training.epochs)
+    results = trainer.train(data_loaders, config.training.epochs)
+
+    if True:  # optuna
+        return min(results["val_losses"])
+    else:
+        return results
+
+
+def create_and_run_study(objective, number_trials=0):
+    study = optuna.create_study(
+        study_name="ParlaParla",
+        direction="minimize",
+    )
+    study.optimize(
+        objective,
+        n_trials=number_trials,
+    )
+    return study
+
+
+if __name__ == "__main__":
+
+    use_optuna = True
+    if use_optuna:
+        trials = create_and_run_study(setup, 4)
+        print("Best params")
+        print(trials.best_params)
+    else:
+        results = setup()
+
+    wandb.finish()

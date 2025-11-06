@@ -4,12 +4,23 @@ from tqdm import tqdm
 
 class ModelTrainer:
 
-    def __init__(self, model, optimizer, scheduler, loss_fn, device):
+    def __init__(
+        self,
+        model,
+        optimizer,
+        scheduler,
+        loss_fn,
+        device,
+        log_callback=None,
+        hpo_callback=None,  # hyperparameter optimzer callback (using optuna)
+    ):
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.loss_fn = loss_fn
         self.device = device
+        self.log_callback = log_callback
+        self.hpo_callback = hpo_callback
 
         self.scaler = torch.GradScaler(device=device)
 
@@ -100,6 +111,19 @@ class ModelTrainer:
             self.val_accuracies.append(val_acc)
 
             self.scheduler.step()
+
+            metrics_stats = {
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                "train_acc": train_acc,
+                "val_acc": val_acc,
+            }
+
+            if self.log_callback:
+                self.log_callback(metrics_stats)
+
+            if self.hpo_callback:
+                self.hpo_callback(metrics_stats, epoch)
 
         return {
             "train_losses": self.train_losses,

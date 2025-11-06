@@ -10,14 +10,17 @@ load_preprocessed: True
 llm:
   model: "FacebookAI/roberta-base"
 
+use_wandb: True
+use_optuna: False
+
 # training settings
 training:
   seed: 42
   batch_size: 8
   lr: 1e-3
-  epochs: 20
+  epochs: 3
   weight_decay: 0.01
-  unfreeze: True
+  unfreeze: False
   classifier:
     hidden_dim: 256
     dropout: 0.1
