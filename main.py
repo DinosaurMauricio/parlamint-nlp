@@ -7,10 +7,10 @@ from transformers import RobertaTokenizer, AutoModel, get_linear_schedule_with_w
 from utils.dataset_builder import load_data, DatasetBuilder
 from utils.collate import collate_fn
 from utils.seed import set_seed
-from model.classification import ClassificationParlamint
-from utils.data_loader_builder import ParliamentDataLoaderBuilder
-from training.model_trainer import ModelTrainer
 from utils.label_encoder import LabelEncoder
+from utils.data_loader_builder import ParliamentDataLoaderBuilder
+from model.classification import ClassificationParlamint
+from training.model_trainer import ModelTrainer
 
 
 if __name__ == "__main__":
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     model = ClassificationParlamint(
         encoder,
         len(label_encoder),
-        unfreeze=config.training.unfreeze,
+        config,
     )
     model.to(device)
 

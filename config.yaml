@@ -18,6 +18,9 @@ training:
   epochs: 20
   weight_decay: 0.01
   unfreeze: True
+  classifier:
+    hidden_dim: 256
+    dropout: 0.1
 
 # Dataset configuration, thresholds and parameters for preprocessing
 dataset:
