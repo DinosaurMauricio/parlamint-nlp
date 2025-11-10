@@ -29,12 +29,14 @@ class ClassificationParlamint(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(classifier_hidden_dim, num_classes),
         )
+        self.norm = nn.LayerNorm(hidden_size)
 
     def forward(self, input_ids, attention_mask):
         outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
 
         pooled_output = outputs.last_hidden_state[:, 0, :]  # Use [CLS]
 
+        pooled_output = self.norm(pooled_output)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
 
