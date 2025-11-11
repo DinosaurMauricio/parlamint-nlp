@@ -91,12 +91,18 @@ class ModelTrainer:
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
                 labels = labels.to(self.device)
 
-                outputs = self.model(**inputs)
-                loss = self.loss_fn(outputs, labels)
+                # loss_fn is None when using a pretrained model only
+                if self.loss_fn is None:
+                    outputs = self.model(**inputs, labels=labels)
+                    loss = outputs.loss
+                    logits = outputs.logits
+                else:
+                    logits = self.model(**inputs)
+                    loss = self.loss_fn(logits, labels)
 
                 total_loss += loss.item()
 
-                tot_correct_predictions += self._calcualte_accuracy(outputs, labels)
+                tot_correct_predictions += self._calcualte_accuracy(logits, labels)
                 total_samples += labels.size(0)
 
                 val_bar.set_postfix(loss=f"{loss.item():.4f}")
