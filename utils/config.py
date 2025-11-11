@@ -107,7 +107,7 @@ def setup_encoder_tokenizer(config):
     print("Loading Encoder... ")
     if config.training.model == "pretrained":
         encoder = RobertaForSequenceClassification.from_pretrained(
-            "roberta-base", labels=11
+            "roberta-base", num_labels=11
         )
     else:
         encoder = AutoModel.from_pretrained(config.llm.model)
