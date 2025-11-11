@@ -6,7 +6,7 @@ from omegaconf import OmegaConf
 from transformers import RobertaTokenizer, AutoModel, get_linear_schedule_with_warmup
 
 from callbacks.optuna_callback import OptunaCallback
-from model.classification import ClassificationParlamint
+from model.custom_classifier import CustomClassifier
 from utils.dataset_builder import DatasetBuilder
 
 # TODO: Could be a class...
@@ -69,20 +69,33 @@ def setup_optuna_study(objective, number_trials=0):
     return study
 
 
-def setup_model(config, encoder, label_encoder):
-    print("Loading model...")
-    model = ClassificationParlamint(
-        encoder,
-        len(label_encoder),
-        config,
-    )
+def get_model_class(model_name):
+    models = {
+        "custom": CustomClassifier,
+    }
+    if model_name not in models:
+        raise ValueError(f"Unknown model: {model_name}.")
 
+    return models[model_name]
+
+
+def create_model(config, encoder, label_encoder=None):
+    ModelClass = get_model_class(config.training.model)
+
+    if ModelClass is CustomClassifier:
+        if label_encoder is None:
+            raise ValueError("label_encoder cannot be None for CustomClassifier")
+        model = ModelClass(encoder, len(label_encoder), config)
+
+    return model
+
+
+def print_model_stats(model):
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(
         f"Total parameters: {total_params} \nTrainable parameters: {trainable_params}"
     )
-    return model
 
 
 def setup_encoder_tokenizer(config):

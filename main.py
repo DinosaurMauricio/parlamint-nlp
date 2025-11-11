@@ -7,11 +7,14 @@ import argparse
 from omegaconf import OmegaConf
 from wandb.sdk.lib.runid import generate_id
 
+# from peft import LoraConfig, get_peft_model, TaskType
+
 from utils.config import (
     setup_optuna_trial,
     setup_logging,
     setup_optuna_study,
-    setup_model,
+    print_model_stats,
+    create_model,
     setup_encoder_tokenizer,
     setup_scheduler,
     setup_datasets,
@@ -67,13 +70,30 @@ def single_run(trial=None, use_wandb=False):
     print("Prepearing data loaders...")
     data_loaders = dataloader_builder.get_dataloaders()
 
-    model = setup_model(config, encoder, label_encoder)
+    if config.training.model == "custom":
+        model = create_model(config, encoder, label_encoder)
+
+    else:
+        model = encoder
+        # lora_config = LoraConfig(
+        #    r=32,
+        #    lora_alpha=32,
+        #    target_modules=["query", "value"],
+        #    lora_dropout=0.05,
+        #    bias="none",
+        #    task_type=TaskType.SEQ_CLS,
+        # )
+        # model = get_peft_model(model, lora_config)
     model.to(device)
 
-    loss_fn = nn.CrossEntropyLoss(
-        weight=torch.tensor(class_weights).to(device).float(),
-        ignore_index=tokenizer.pad_token_id,
-    )
+    print_model_stats(model)
+
+    loss_fn = None
+    if config.training.model == "custom":
+        loss_fn = nn.CrossEntropyLoss(
+            weight=torch.tensor(class_weights).to(device).float(),
+            ignore_index=tokenizer.pad_token_id,
+        )
     optimizer = torch.optim.AdamW(
         lr=config.training.lr,
         params=model.parameters(),
