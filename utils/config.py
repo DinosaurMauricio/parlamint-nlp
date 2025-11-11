@@ -3,7 +3,12 @@ import json
 import optuna
 
 from omegaconf import OmegaConf
-from transformers import RobertaTokenizer, AutoModel, get_linear_schedule_with_warmup
+from transformers import (
+    RobertaTokenizer,
+    AutoModel,
+    get_linear_schedule_with_warmup,
+    RobertaForSequenceClassification,
+)
 
 from callbacks.optuna_callback import OptunaCallback
 from model.custom_classifier import CustomClassifier
@@ -100,8 +105,14 @@ def print_model_stats(model):
 
 def setup_encoder_tokenizer(config):
     print("Loading Encoder... ")
+    if config.training.model == "pretrained":
+        encoder = RobertaForSequenceClassification.from_pretrained(
+            "roberta-base", labels=11
+        )
+    else:
+        encoder = AutoModel.from_pretrained(config.llm.model)
+
     tokenizer = RobertaTokenizer.from_pretrained(config.llm.model)
-    encoder = AutoModel.from_pretrained(config.llm.model)
     return encoder, tokenizer
 
     # dummy classes to run on local and verify it can run
