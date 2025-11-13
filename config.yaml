@@ -12,7 +12,7 @@ llm:
 
 # training settings
 training:
-  model: "pretrained" # custom or pretrained.
+  model_type: "pretrained" # custom or pretrained.
   seed: 42
   batch_size: 8
   lr: 1e-3

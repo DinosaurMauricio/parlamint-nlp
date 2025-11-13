@@ -29,9 +29,9 @@ def configure_optimizer(model, lr, weigth_decay):
     return optimizer
 
 
-def configure_loss(model_name, pad_token_id, weight=None):
+def configure_loss(model_type, pad_token_id, weight=None):
     loss_fn = None
-    if model_name == "custom":
+    if model_type == "custom":
         loss_fn = nn.CrossEntropyLoss(
             # weight=torch.tensor(class_weights).to(device).float(),
             ignore_index=pad_token_id,
@@ -52,9 +52,9 @@ def configure_scheduler(train_size, num_epochs, optimizer):
     return scheduler
 
 
-def configure_encoder_tokenizer(model_name):
+def configure_encoder_tokenizer(model_name, model_type):
     print("Loading Encoder... ")
-    if model_name == "pretrained":
+    if model_type == "pretrained":
         encoder = RobertaForSequenceClassification.from_pretrained(
             "roberta-base", num_labels=11
         )
@@ -72,15 +72,15 @@ def configure_encoder_tokenizer(model_name):
 
 def create_model(config, encoder, label_encoder=None):
     model = None
-    model_name = config.training.model
-    if model_name == "custom":
+    model_type = config.training.model_type
+    if model_type == "custom":
         if label_encoder is None:
             raise ValueError("label_encoder required for CustomClassifier")
         model = CustomClassifier(encoder, len(label_encoder), config)
-    elif model_name == "pretrained":
+    elif model_type == "pretrained":
         model = encoder
     else:
-        raise ValueError(f"Unknown model: {model_name}")
+        raise ValueError(f"Unknown model: {model_type}")
 
     return model
 

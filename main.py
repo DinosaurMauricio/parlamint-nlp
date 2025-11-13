@@ -46,7 +46,9 @@ def setup_training(config, optuna_callback=None, wandb_callback=None):
     set_seed(config.training.seed)
     print(f"Seed: {config.training.seed}")
 
-    encoder, tokenizer = configure_encoder_tokenizer(config.training.model)
+    encoder, tokenizer = configure_encoder_tokenizer(
+        config.llm.model, config.training.model_type
+    )
     data_manager = DataManager(config)
     data, _ = data_manager.setup_datasets()
 
