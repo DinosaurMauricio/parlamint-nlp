@@ -8,22 +8,17 @@ from transformers import (
     RobertaForSequenceClassification,
 )
 
-if torch.cuda.is_available():
-    from peft import LoraConfig, get_peft_model, TaskType
+from peft import LoraConfig, get_peft_model, TaskType
 
-from callbacks.optuna_callback import OptunaCallback
 from model.custom_classifier import CustomClassifier
-from utils.dataset_builder import DatasetBuilder
-from utils.file_loader import ParlaMintFileLoader
-from utils.label_encoder import LabelEncoder
 
 
-def configure_optimizer(model, lr, weigth_decay):
+def configure_optimizer(model, lr, weight_decay):
 
     optimizer = torch.optim.AdamW(
         lr=lr,
         params=model.parameters(),
-        weight_decay=weigth_decay,
+        weight_decay=weight_decay,
     )
 
     return optimizer

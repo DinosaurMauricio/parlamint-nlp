@@ -62,7 +62,7 @@ def setup_training(config, optuna_callback=None, wandb_callback=None):
     # model = apply_lora(model)
     loss_fn = configure_loss(config.training.model, tokenizer.pad_token_id)
     optimizer = configure_optimizer(
-        model, config.training.lr, config.training.weigth_decay
+        model, config.training.lr, config.training.weight_decay
     )
     scheduler = configure_scheduler(
         len(data_loaders["train"]), config.training.epochs, optimizer
