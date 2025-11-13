@@ -1,25 +1,25 @@
 import os
 import torch
-import torch.nn as nn
+
 import wandb
 import argparse
 
 from omegaconf import OmegaConf
 from wandb.sdk.lib.runid import generate_id
 
-# from peft import LoraConfig, get_peft_model, TaskType
-
 from utils.config import (
-    setup_optuna_trial,
-    setup_logging,
-    setup_optuna_study,
-    print_model_stats,
-    create_model,
-    setup_encoder_tokenizer,
-    setup_scheduler,
-    setup_datasets,
+    OptunaManager,
+    WandbManager,
+    DataManager,
 )
-from utils.dataset_builder import load_data
+from utils.model import (
+    configure_encoder_tokenizer,
+    configure_loss,
+    configure_optimizer,
+    configure_scheduler,
+    create_model,
+    apply_lora,
+)
 from utils.collate import collate_fn
 from utils.seed import set_seed
 from utils.label_encoder import LabelEncoder
@@ -39,109 +39,84 @@ parser.add_argument(
 )
 
 
-def single_run(trial=None, use_wandb=False):
-    config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
-    print(f"Config:\n\n{OmegaConf.to_yaml(config)}")
-
-    optuna_callback = setup_optuna_trial(config, trial)
-    wandb_callback = setup_logging(config, PROJECT_NAME, WANDB_ID, use_wandb)
-
+def setup_training(config, optuna_callback=None, wandb_callback=None):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
 
     set_seed(config.training.seed)
     print(f"Seed: {config.training.seed}")
 
-    print("Loading data...")
-    raw_data = load_data(config)
-    print(f"Loaded dataset... Samples loaded: {len(raw_data)} ")
+    encoder, tokenizer = configure_encoder_tokenizer(config.training.model)
+    data_manager = DataManager(config)
+    data, _ = data_manager.setup_datasets()
 
-    print("Loading Labels...")
-    label_encoder = LabelEncoder()
-
-    data, class_weights = setup_datasets(config, raw_data, label_encoder)
-
-    encoder, tokenizer = setup_encoder_tokenizer(config)
-
+    print("Prepearing data loaders...")
     dataloader_builder = ParliamentDataLoaderBuilder(
         config, data, tokenizer, collate_fn
     )
-
-    print("Prepearing data loaders...")
     data_loaders = dataloader_builder.get_dataloaders()
 
-    if config.training.model == "custom":
-        model = create_model(config, encoder, label_encoder)
-
-    else:
-        model = encoder
-        # lora_config = LoraConfig(
-        #    r=32,
-        #    lora_alpha=32,
-        #    target_modules=["query", "value"],
-        #    lora_dropout=0.05,
-        #    bias="none",
-        #    task_type=TaskType.SEQ_CLS,
-        # )
-        # model = get_peft_model(model, lora_config)
-    model.to(device)
-
-    print_model_stats(model)
-
-    loss_fn = None
-    if config.training.model == "custom":
-        loss_fn = nn.CrossEntropyLoss(
-            weight=torch.tensor(class_weights).to(device).float(),
-            ignore_index=tokenizer.pad_token_id,
-        )
-    optimizer = torch.optim.AdamW(
-        lr=config.training.lr,
-        params=model.parameters(),
-        weight_decay=config.training.weight_decay,
+    model = create_model(config, encoder, LabelEncoder())
+    # model = apply_lora(model)
+    loss_fn = configure_loss(config.training.model, tokenizer.pad_token_id)
+    optimizer = configure_optimizer(
+        model, config.training.lr, config.training.weigth_decay
     )
-    scheduler = setup_scheduler(
+    scheduler = configure_scheduler(
         len(data_loaders["train"]), config.training.epochs, optimizer
     )
 
-    args = {
-        "hpo_callback": optuna_callback,
-        "log_callback": wandb_callback,
-        "model": model,
-        "optimizer": optimizer,
-        "scheduler": scheduler,
-        "loss_fn": loss_fn,
-        "device": device,
-    }
+    trainer = ModelTrainer(
+        hpo_callback=optuna_callback,
+        log_callback=wandb_callback,
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        loss_fn=loss_fn,
+        device=device,
+    )
 
-    trainer = ModelTrainer(**args)
+    return trainer, data_loaders
+
+
+def train_model(config, use_wandb=False):
+    wandb_callback = WandbManager(
+        config, PROJECT_NAME, WANDB_ID, use_wandb
+    ).setup_callback()
+
+    trainer, data_loaders = setup_training(config, wandb_callback=wandb_callback)
+    return trainer.train(data_loaders, config.training.epochs)
+
+
+def optuna_objective(trial, use_wandb=False):
+    config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
+
+    optuna_callback = OptunaManager(config).setup_trial_callback(trial)
+    wandb_callback = WandbManager(
+        config, PROJECT_NAME, WANDB_ID, use_wandb
+    ).setup_callback()
+
+    trainer, data_loaders = setup_training(
+        config, optuna_callback=optuna_callback, wandb_callback=wandb_callback
+    )
+
     results = trainer.train(data_loaders, config.training.epochs)
-
-    # optuna requires a val to maximize/minimize
-    # so in case a trial is sent we return this value
-    if trial:
-        return min(results["val_losses"])
-    else:
-        return results
-
-
-def run_hpo(num_trials, log):
-    # hyperparameter optimization (hpo)
-    objective = lambda trial: single_run(trial, use_wandb=log)
-
-    study = setup_optuna_study(objective, num_trials)
-    print("Best params:")
-    print(study.best_params)
-    return study
+    return min(results["val_losses"])
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
     if args.optuna:
         print("Starting optuna trials...")
-        run_hpo(args.number_trials, args.log)
+        # hyperparameter optimization (hpo)
+        objective = lambda trial: optuna_objective(trial, use_wandb=args.log)
+        study = OptunaManager.create_study(objective, args.number_trials)
+        print("Best params:", study.best_params)
     else:
         print("Single run...")
-        results = single_run(use_wandb=args.log)
+        config = OmegaConf.load(PATH_PROJECT + "/config.yaml")
+        print(f"Config:\n\n{OmegaConf.to_yaml(config)}")
+        results = train_model(config, use_wandb=args.log)
 
     if args.log:
         wandb.finish()

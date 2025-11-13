@@ -1,18 +1,11 @@
 import os
 import pandas as pd
-from utils.file_loader import ParlaMintFileLoader
+
 from utils.label_encoder import LabelEncoder
 from utils.filters import DataFilter
+
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
-
-
-def load_data(config):
-    if os.path.exists(config.paths.preprocessed_data):
-        return pd.read_parquet(config.paths.preprocessed_data)
-    loader = ParlaMintFileLoader(config)
-    samples, _ = loader.load_samples()
-    return pd.DataFrame(samples)
 
 
 class DatasetBuilder:
