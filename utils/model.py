@@ -1,15 +1,15 @@
 import torch
 import torch.nn as nn
 
-from transformers import (
-    RobertaTokenizer,
-    AutoModel,
-    get_linear_schedule_with_warmup,
-    RobertaForSequenceClassification,
-)
+if torch.cuda.is_available():
+    from transformers import (
+        RobertaTokenizer,
+        AutoModel,
+        RobertaForSequenceClassification,
+    )
+    from peft import LoraConfig, get_peft_model, TaskType
 
-from peft import LoraConfig, get_peft_model, TaskType
-
+from transformers import get_linear_schedule_with_warmup
 from model.custom_classifier import CustomClassifier
 
 

@@ -17,8 +17,8 @@ class CustomClassifier(nn.Module):
             for param in self.encoder.encoder.layer[-2:].parameters():
                 param.requires_grad = True
 
-        # hidden_size = self.encoder.config.hidden_size  # 768
-        hidden_size = 768
+        hidden_size = self.encoder.config.hidden_size  # 768
+        # hidden_size = 768
         dropout = config.training.classifier.dropout
         classifier_hidden_dim = config.training.classifier.hidden_dim
 

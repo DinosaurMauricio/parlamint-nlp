@@ -45,7 +45,8 @@ def setup_training(config, optuna_callback=None, wandb_callback=None):
     data_loaders = dataloader_builder.get_dataloaders()
 
     model = create_model(config, encoder, LabelEncoder())
-    # model = apply_lora(model)
+    if config.training.use_lora:
+        model = apply_lora(model)
     print_model_stats(model)
 
     loss_fn = configure_loss(config.training.model_type, tokenizer.pad_token_id)
