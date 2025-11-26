@@ -1,5 +1,6 @@
 import torch
 from tqdm import tqdm
+from sklearn.metrics import classification_report
 
 
 class ModelTrainer:
@@ -26,14 +27,12 @@ class ModelTrainer:
 
         self.train_losses = []
         self.val_losses = []
-        self.train_accuracies = []
-        self.val_accuracies = []
 
     def train_epoch(self, dataloader, epoch):
         self.model.train()
         total_loss = 0.0
-        tot_correct_predictions = 0
-        total_samples = 0
+        batch_labels = []
+        batch_preds = []
 
         train_bar = tqdm(
             dataloader, desc=f"Epoch {epoch} Training", total=len(dataloader)
@@ -63,20 +62,19 @@ class ModelTrainer:
 
             total_loss += loss.item()
 
-            tot_correct_predictions += self._calcualte_accuracy(logits, labels)
-            total_samples += labels.size(0)
+            batch_labels.append(labels.cpu())
+            batch_preds.append(torch.argmax(logits, dim=1).cpu())
 
             train_bar.set_postfix(loss=f"{loss.item():.4f}")
 
         avg_loss = total_loss / len(dataloader)
-        avg_accuracy = tot_correct_predictions / total_samples
-        return avg_loss, avg_accuracy
+        return avg_loss, batch_labels, batch_preds
 
     def validate_epoch(self, dataloader, epoch):
         self.model.eval()
         total_loss = 0.0
-        tot_correct_predictions = 0
-        total_samples = 0
+        batch_preds = []
+        batch_labels = []
 
         with torch.no_grad():
             val_bar = tqdm(
@@ -102,32 +100,58 @@ class ModelTrainer:
 
                 total_loss += loss.item()
 
-                tot_correct_predictions += self._calcualte_accuracy(logits, labels)
-                total_samples += labels.size(0)
+                batch_labels.append(labels.cpu())
+                batch_preds.append(torch.argmax(logits, dim=1).cpu())
 
                 val_bar.set_postfix(loss=f"{loss.item():.4f}")
 
         avg_loss = total_loss / len(dataloader)
-        avg_accuracy = tot_correct_predictions / total_samples
-        return avg_loss, avg_accuracy
+
+        return avg_loss, batch_labels, batch_preds
 
     def train(self, data_loaders, epochs):
         for epoch in range(epochs):
-            train_loss, train_acc = self.train_epoch(data_loaders["train"], epoch)
-            val_loss, val_acc = self.validate_epoch(data_loaders["val"], epoch)
+            train_loss, train_labels, train_preds = self.train_epoch(
+                data_loaders["train"], epoch
+            )
+            val_loss, val_labels, val_preds = self.validate_epoch(
+                data_loaders["val"], epoch
+            )
+
+            train_report = classification_report(
+                torch.cat(train_labels),
+                torch.cat(train_preds),
+                output_dict=True,
+                zero_division=0,
+            )
+
+            val_report = classification_report(
+                torch.cat(val_labels),
+                torch.cat(val_preds),
+                output_dict=True,
+                zero_division=0,
+            )
 
             self.train_losses.append(train_loss)
             self.val_losses.append(val_loss)
-            self.train_accuracies.append(train_acc)
-            self.val_accuracies.append(val_acc)
 
             self.scheduler.step()
 
             metrics_stats = {
                 "train_loss": train_loss,
                 "val_loss": val_loss,
-                "train_acc": train_acc,
-                "val_acc": val_acc,
+                "train_acc": train_report["accuracy"],  # type: ignore
+                "train_precision_avg": train_report["macro avg"][  # type:ignore
+                    "precision"
+                ],
+                "train_recall_avg": train_report["macro avg"]["recall"],  # type:ignore
+                "train_f1_avg": train_report["macro avg"]["f1-score"],  # type:ignore
+                "val_acc": val_report["accuracy"],  # type: ignore
+                "val_precision_avg": val_report["macro avg"][  # type:ignore
+                    "precision"
+                ],
+                "val_recall_avg": val_report["macro avg"]["recall"],  # type:ignore
+                "val_f1_avg": val_report["macro avg"]["f1-score"],  # type:ignore
             }
 
             if self.log_callback:
@@ -139,8 +163,6 @@ class ModelTrainer:
         return {
             "train_losses": self.train_losses,
             "val_losses": self.val_losses,
-            "train_accuracies": self.train_accuracies,
-            "val_accuracies": self.val_accuracies,
         }
 
     def _apply_gradient(self, loss):
@@ -155,8 +177,3 @@ class ModelTrainer:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
             self.optimizer.step()
-
-    def _calcualte_accuracy(self, outputs, labels):
-        predictions = torch.argmax(outputs, dim=1)
-        correct_predictions = (predictions == labels).sum().item()
-        return correct_predictions
