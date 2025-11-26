@@ -12,13 +12,14 @@ llm:
 
 # training settings
 training:
-  model_type: "pretrained" # custom or pretrained.
+  model_type: "custom" # custom or pretrained.
   seed: 42
   batch_size: 8
   lr: 1e-3
   epochs: 3
   weight_decay: 0.01
   unfreeze: False
+  use_lora: False
   classifier:
     hidden_dim: 256
     dropout: 0.1
