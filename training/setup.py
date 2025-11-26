@@ -48,7 +48,7 @@ def setup_training(config, optuna_callback=None, wandb_callback=None):
     # model = apply_lora(model)
     print_model_stats(model)
 
-    loss_fn = configure_loss(config.training.model, tokenizer.pad_token_id)
+    loss_fn = configure_loss(config.training.model_type, tokenizer.pad_token_id)
     optimizer = configure_optimizer(
         model, config.training.lr, config.training.weight_decay
     )
